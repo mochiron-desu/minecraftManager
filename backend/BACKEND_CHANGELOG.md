@@ -41,3 +41,14 @@ This file tracks all changes, modules, and features added to the backend.
 - Implemented persistent user store using a JSON file, upgradeable to DB. 
 - Implemented security hardening: rate limiting and input validation middleware. 
 - Created API documentation (API.md) in backend/. 
+
+## [2024-06-10] RCON Service Improvements
+- Updated rconService.js to use `.authenticated` instead of deprecated `.hasAuthed` for connection status.
+- Added event handlers for 'end' and 'error' to clear the singleton RCON instance on disconnect or error.
+- Added comments noting that rcon-client does not provide built-in connection retry or command buffering; recommend handling these externally for production stability. 
+
+## [2024-06-10] Status Endpoint Parsing Improvement
+- Improved /api/status endpoint to robustly parse both 'There are X of a max of Y players online:' and 'There are X of a max Y players online:' formats from the Minecraft server's RCON 'list' command.
+- Updated regex and logic in statusController.js to handle both formats and always return a structured JSON response: { status, online, max, players }.
+- Handles empty player lists and trims player names for consistency.
+- Adds a 'raw' field in the response if the format is unrecognized, for easier debugging. 

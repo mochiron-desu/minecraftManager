@@ -11,13 +11,19 @@ const statusController = {
     try {
       await connectRcon(rconOptions);
       const response = await sendCommand('list');
-      // Example response: 'There are 1 of a max 20 players online: Steve'
-      const match = response.match(/There are (\d+) of a max (\d+) players online: ?(.*)?/);
+      // Accept both 'of a max of' and 'of a max' formats
+      const match = response.match(/There are (\d+) of a max(?: of)? (\d+) players online: ?(.*)?/);
       if (match) {
         const [, online, max, names] = match;
-        res.json({ status: 'online', online: Number(online), max: Number(max), players: names ? names.split(', ') : [] });
+        // Clean up player names: handle empty string or whitespace
+        let players = [];
+        if (names && names.trim().length > 0) {
+          players = names.split(',').map(name => name.trim()).filter(Boolean);
+        }
+        res.json({ status: 'online', online: Number(online), max: Number(max), players });
       } else {
-        res.json({ status: 'online', response });
+        // Fallback: try to extract numbers, but return empty players
+        res.json({ status: 'online', online: 0, max: 0, players: [], raw: response });
       }
     } catch (err) {
       res.json({ status: 'offline', error: err.message });
