@@ -27,3 +27,17 @@ This file tracks all changes, modules, and features added to the backend.
 
 ## [2024-06-09] Git Ignore
 - Added .gitignore to exclude node_modules, .env, logs, and other common files/folders 
+
+## [2024-06-10] Authentication System Implementation Started
+- Started implementation of multi-admin authentication system.
+- Preparing initial files: user model, auth controller, auth routes. 
+- Created initial files: models/User.js, controllers/authController.js, routes/auth.js using standard conventions. 
+- Implemented registration and login logic in auth controller, including password hashing (bcryptjs) and JWT issuance (jsonwebtoken). 
+- Implemented RCON integration service (connect, send commands, handle responses) in services/rconService.js. 
+- Created /api/console endpoint for sending commands to Minecraft server via RCON. 
+- Implemented player management endpoints: list, kick, ban, whitelist. 
+- Implemented server status/info endpoint. 
+- Implemented optional admin activity logging service. 
+- Implemented persistent user store using a JSON file, upgradeable to DB. 
+- Implemented security hardening: rate limiting and input validation middleware. 
+- Created API documentation (API.md) in backend/. 
