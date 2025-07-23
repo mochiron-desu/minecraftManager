@@ -66,3 +66,9 @@ This file tracks all changes, modules, and features added to the backend.
 - Added error handling for corrupted or invalid `users.json` to prevent server crashes; logs a warning and uses an empty user list if loading fails.
 - Created `backend/data/` directory and initialized `users.json` for persistent storage.
 - Added `data/users.json` to `.gitignore` to prevent committing user data to version control. 
+
+## [2024-06-12] Admin Action Logging to Discord Webhook
+- Updated adminLogger service to send admin action logs to a Discord webhook using node-fetch and a DISCORD_WEBHOOK_URL environment variable, instead of writing to a file.
+- All admin actions (register, login, console commands, kick, ban, whitelist) now log to Discord with the admin username, action, and details where relevant.
+- Ensured authentication middleware attaches user info (username, role) to req.user for all authenticated endpoints, so logs include the correct admin username.
+- Added node-fetch@2.x as a backend dependency for webhook integration. 
