@@ -52,3 +52,11 @@ This file tracks all changes, modules, and features added to the backend.
 - Updated regex and logic in statusController.js to handle both formats and always return a structured JSON response: { status, online, max, players }.
 - Handles empty player lists and trims player names for consistency.
 - Adds a 'raw' field in the response if the format is unrecognized, for easier debugging. 
+
+## [2024-06-11] Authentication Enforcement for Sensitive Endpoints
+- Added authentication middleware to require JWT Bearer tokens for POST /api/console, /api/players/kick, /api/players/ban, and /api/players/whitelist endpoints.
+- Created src/middleware/auth.js for JWT verification.
+- Updated API.md to document authentication requirements for these endpoints. 
+
+## [2024-06-11] RCON Connection Auto-Disconnect
+- Updated rconService.js so that sendCommand now always calls disconnectRcon() after sending a command, regardless of success or failure. This ensures that the RCON TCP connection is closed after every command, preventing lingering connections and potential timeouts. 

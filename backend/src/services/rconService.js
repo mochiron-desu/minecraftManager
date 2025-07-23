@@ -19,7 +19,11 @@ async function connectRcon(options) {
 
 async function sendCommand(command) {
   if (!rcon || !rcon.authenticated) throw new Error('RCON not connected');
-  return await rcon.send(command);
+  try {
+    return await rcon.send(command);
+  } finally {
+    await disconnectRcon();
+  }
 }
 
 async function disconnectRcon() {

@@ -1,4 +1,4 @@
-const { connectRcon, sendCommand } = require('../services/rconService');
+const { connectRcon, sendCommand, disconnectRcon } = require('../services/rconService');
 
 const rconOptions = {
   host: process.env.RCON_HOST || 'localhost',

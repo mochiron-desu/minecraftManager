@@ -16,6 +16,7 @@
 
 ### POST /api/console
 - Send a command to the Minecraft server via RCON
+- Requires authentication: Bearer token in Authorization header
 - Body: `{ "command": "say Hello" }`
 - Response: `{ "response": "..." }`
 
@@ -27,16 +28,19 @@
 
 ### POST /api/players/kick
 - Kick a player
+- Requires authentication: Bearer token in Authorization header
 - Body: `{ "username": "Steve", "reason": "Spamming" }`
 - Response: `{ "response": "Kicked Steve" }`
 
 ### POST /api/players/ban
 - Ban a player
+- Requires authentication: Bearer token in Authorization header
 - Body: `{ "username": "Steve", "reason": "Griefing" }`
 - Response: `{ "response": "Banned Steve" }`
 
 ### POST /api/players/whitelist
 - Add or remove a player from the whitelist
+- Requires authentication: Bearer token in Authorization header
 - Body: `{ "username": "Steve", "action": "add" }` or `{ "username": "Steve", "action": "remove" }`
 - Response: `{ "response": "Added Steve to whitelist" }`
 
