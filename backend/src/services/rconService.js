@@ -17,12 +17,12 @@ async function connectRcon(options) {
   return rcon;
 }
 
-async function sendCommand(command) {
+async function sendCommand(command, keepConnected = false) {
   if (!rcon || !rcon.authenticated) throw new Error('RCON not connected');
   try {
     return await rcon.send(command);
   } finally {
-    await disconnectRcon();
+    if (!keepConnected) await disconnectRcon();
   }
 }
 

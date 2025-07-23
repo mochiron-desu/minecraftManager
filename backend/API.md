@@ -47,5 +47,26 @@
 ## Server Status
 
 ### GET /api/status
-- Get server status and online players
-- Response: `{ "status": "online", "online": 1, "max": 20, "players": ["Steve"] }` 
+- Get server status and online players, plus server performance details
+- Response: 
+```
+{
+  "status": "online", // or "offline"
+  "online": 1,         // number of online players
+  "max": 20,           // max players
+  "players": ["Steve"],
+  "tps": {             // may be null if unavailable
+    "meanTickTime": 1.23, // ms, for Forge
+    "meanTPS": 20.0       // for Forge
+    // or
+    // "last1m": 20.0, "last5m": 19.9, "last15m": 19.8 // for Paper/Spigot
+  },
+  "ram": {             // may be null if unavailable
+    "allocated": 2048, // MB, for some modded servers
+    "used": 1024,      // MB
+    "percent": 50      // % used, for Paper/Spigot (optional)
+  },
+  "ping": 123.4,       // ms, may be null if unavailable
+  "raw": "..."         // raw response from 'list' command
+}
+``` 
