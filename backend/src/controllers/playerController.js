@@ -1,4 +1,5 @@
 const { connectRcon, sendCommand } = require('../services/rconService');
+const { logAction } = require('../services/adminLogger');
 
 const rconOptions = {
   host: process.env.RCON_HOST || 'localhost',
@@ -23,6 +24,7 @@ const playerController = {
       await connectRcon(rconOptions);
       const cmd = `kick ${username}${reason ? ' ' + reason : ''}`;
       const response = await sendCommand(cmd);
+      logAction(req.user?.username || 'unknown', 'kick', `${username}${reason ? ' | ' + reason : ''}`);
       res.json({ response });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -35,6 +37,7 @@ const playerController = {
       await connectRcon(rconOptions);
       const cmd = `ban ${username}${reason ? ' ' + reason : ''}`;
       const response = await sendCommand(cmd);
+      logAction(req.user?.username || 'unknown', 'ban', `${username}${reason ? ' | ' + reason : ''}`);
       res.json({ response });
     } catch (err) {
       res.status(500).json({ message: err.message });
@@ -47,6 +50,7 @@ const playerController = {
       await connectRcon(rconOptions);
       const cmd = `whitelist ${action} ${username}`;
       const response = await sendCommand(cmd);
+      logAction(req.user?.username || 'unknown', 'whitelist', `${action} | ${username}`);
       res.json({ response });
     } catch (err) {
       res.status(500).json({ message: err.message });

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UserStore = require('../models/UserStore');
+const { logAction } = require('../services/adminLogger');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 
@@ -19,6 +20,7 @@ const authController = {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = new User({ username, passwordHash });
     UserStore.addUser(user);
+    logAction(username, 'register');
     res.status(201).json({ message: 'User registered' });
   },
   async login(req, res) {
@@ -35,6 +37,7 @@ const authController = {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     const token = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    logAction(username, 'login');
     res.json({ token });
   },
 };
