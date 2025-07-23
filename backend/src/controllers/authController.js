@@ -2,9 +2,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
-// In-memory user store (upgradeable to DB)
-const users = [];
+const UserStore = require('../models/UserStore');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 
@@ -14,13 +12,13 @@ const authController = {
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
     }
-    const existing = users.find(u => u.username === username);
+    const existing = UserStore.findUserByUsername(username);
     if (existing) {
       return res.status(409).json({ message: 'Username already exists' });
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = new User({ username, passwordHash });
-    users.push(user);
+    UserStore.addUser(user);
     res.status(201).json({ message: 'User registered' });
   },
   async login(req, res) {
@@ -28,7 +26,7 @@ const authController = {
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
     }
-    const user = users.find(u => u.username === username);
+    const user = UserStore.findUserByUsername(username);
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }

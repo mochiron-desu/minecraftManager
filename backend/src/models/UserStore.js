@@ -6,8 +6,13 @@ const dataFile = path.join(__dirname, '../../data/users.json');
 
 function loadUsers() {
   if (!fs.existsSync(dataFile)) return [];
-  const raw = fs.readFileSync(dataFile);
-  return JSON.parse(raw);
+  try {
+    const raw = fs.readFileSync(dataFile);
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn('Warning: Failed to load users.json, using empty user list. Error:', err.message);
+    return [];
+  }
 }
 
 function saveUsers(users) {
