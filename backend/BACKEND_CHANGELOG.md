@@ -60,3 +60,9 @@ This file tracks all changes, modules, and features added to the backend.
 
 ## [2024-06-11] RCON Connection Auto-Disconnect
 - Updated rconService.js so that sendCommand now always calls disconnectRcon() after sending a command, regardless of success or failure. This ensures that the RCON TCP connection is closed after every command, preventing lingering connections and potential timeouts. 
+
+## [2024-06-11] Persistent User Registration & Error Handling
+- User registration and login now use persistent storage via `data/users.json` (UserStore) instead of in-memory array.
+- Added error handling for corrupted or invalid `users.json` to prevent server crashes; logs a warning and uses an empty user list if loading fails.
+- Created `backend/data/` directory and initialized `users.json` for persistent storage.
+- Added `data/users.json` to `.gitignore` to prevent committing user data to version control. 
