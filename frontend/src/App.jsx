@@ -50,20 +50,46 @@ function StatusPage() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastFetch, setLastFetch] = useState(0);
+  const [error, setError] = useState(null);
+
+  const fetchStatus = async (force = false) => {
+    // Don't fetch if we have recent data (within 30 seconds) unless forced
+    const now = Date.now();
+    if (!force && status && (now - lastFetch) < 30000) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/status');
+      if (!response.ok) {
+        if (response.status === 429) {
+          const data = await response.json();
+          setError(`Rate limited: ${data.message}`);
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setStatus(data);
+      setLastFetch(now);
+    } catch (err) {
+      setError(err.message);
+      console.error('Failed to fetch status:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStatus = () => {
-      setLoading(true);
-      fetch('/api/status')
-        .then(r => r.json())
-        .then(setStatus)
-        .finally(() => setLoading(false));
-    };
-
-    fetchStatus();
+    fetchStatus(true); // Initial fetch
     
     if (autoRefresh) {
-      const interval = setInterval(fetchStatus, 10000); // Refresh every 10 seconds
+      const interval = setInterval(() => fetchStatus(), 30000); // Refresh every 30 seconds instead of 10
       return () => clearInterval(interval);
     }
   }, [autoRefresh]);
@@ -97,6 +123,23 @@ function StatusPage() {
   };
 
   if (loading && !status) return <CircularProgress />;
+  if (error) return (
+    <Alert severity="error" sx={{ fontSize: '1.1rem' }}>
+      <Typography variant="h6" sx={{ mb: 1 }}>
+        Connection Error
+      </Typography>
+      <Typography>
+        {error}
+      </Typography>
+      <Button 
+        variant="outlined" 
+        onClick={() => fetchStatus(true)} 
+        sx={{ mt: 2 }}
+      >
+        Retry
+      </Button>
+    </Alert>
+  );
   if (!status) return <Alert severity="error">Failed to load status</Alert>;
 
     return (
@@ -109,7 +152,7 @@ function StatusPage() {
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <Button
             variant="outlined"
-            onClick={() => window.location.reload()}
+            onClick={() => fetchStatus(true)}
             disabled={loading}
             startIcon={loading ? <CircularProgress size={16} /> : null}
           >
@@ -365,30 +408,43 @@ function PlayersPage({ token }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const fetchPlayers = () => {
+  const fetchPlayers = async () => {
     setLoading(true);
-    fetch('/api/players')
-      .then(r => r.json())
-      .then(data => {
-        // Try to parse player list from response
-        const match = data.response?.match(/There are (\d+) of a max(?: of)? (\d+) players online: ?(.*)?/);
-        let players = [];
-        if (match) {
-          const names = match[3];
-          if (names && names.trim().length > 0) {
-            players = names.split(',').map(n => n.trim()).filter(Boolean);
-          }
+    try {
+      const response = await fetch('/api/players');
+      if (!response.ok) {
+        if (response.status === 429) {
+          const data = await response.json();
+          setSnackbar({ message: `Rate limited: ${data.message}`, severity: 'warning' });
+          return;
         }
-        setPlayers(players);
-      })
-      .finally(() => setLoading(false));
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      // Try to parse player list from response
+      const match = data.response?.match(/There are (\d+) of a max(?: of)? (\d+) players online: ?(.*)?/);
+      let players = [];
+      if (match) {
+        const names = match[3];
+        if (names && names.trim().length > 0) {
+          players = names.split(',').map(n => n.trim()).filter(Boolean);
+        }
+      }
+      setPlayers(players);
+    } catch (err) {
+      console.error('Failed to fetch players:', err);
+      setSnackbar({ message: `Failed to fetch players: ${err.message}`, severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { 
     fetchPlayers(); 
     
     if (autoRefresh) {
-      const interval = setInterval(fetchPlayers, 10000); // Refresh every 10 seconds
+      const interval = setInterval(fetchPlayers, 45000); // Refresh every 45 seconds instead of 10
       return () => clearInterval(interval);
     }
   }, [autoRefresh]);
@@ -421,8 +477,20 @@ function PlayersPage({ token }) {
         },
         body: JSON.stringify(body),
       });
+      
+      if (!res.ok) {
+        if (res.status === 429) {
+          const data = await res.json();
+          setSnackbar({ message: `Rate limited: ${data.message}`, severity: 'warning' });
+          return;
+        }
+        const data = await res.json();
+        setSnackbar({ message: data.message || data.response || 'Action failed', severity: 'error' });
+        return;
+      }
+      
       const data = await res.json();
-      setSnackbar({ message: data.message || data.response || 'Action complete', severity: res.ok ? 'success' : 'error' });
+      setSnackbar({ message: data.message || data.response || 'Action complete', severity: 'success' });
       fetchPlayers();
     } catch (e) {
       setSnackbar({ message: e.message, severity: 'error' });
@@ -707,10 +775,21 @@ function ConsolePage({ token }) {
         },
         body: JSON.stringify({ command }),
       });
+      
+      if (!res.ok) {
+        if (res.status === 429) {
+          const data = await res.json();
+          setSnackbar({ message: `Rate limited: ${data.message}`, severity: 'warning' });
+          return;
+        }
+        const data = await res.json();
+        setSnackbar({ message: data.message || 'Error', severity: 'error' });
+        return;
+      }
+      
       const data = await res.json();
       setOutput(data.response || data.message || 'No output');
-      if (!res.ok) setSnackbar({ message: data.message || 'Error', severity: 'error' });
-      else setSnackbar({ message: 'Command executed successfully', severity: 'success' });
+      setSnackbar({ message: 'Command executed successfully', severity: 'success' });
     } catch (e) {
       setSnackbar({ message: e.message, severity: 'error' });
     } finally {
