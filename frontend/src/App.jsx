@@ -48,26 +48,257 @@ function ProtectedRoute({ token, children }) {
 function StatusPage() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
   useEffect(() => {
-    setLoading(true);
-    fetch('/api/status')
-      .then(r => r.json())
-      .then(setStatus)
-      .finally(() => setLoading(false));
-  }, []);
-  if (loading) return <CircularProgress />;
+    const fetchStatus = () => {
+      setLoading(true);
+      fetch('/api/status')
+        .then(r => r.json())
+        .then(setStatus)
+        .finally(() => setLoading(false));
+    };
+
+    fetchStatus();
+    
+    if (autoRefresh) {
+      const interval = setInterval(fetchStatus, 10000); // Refresh every 10 seconds
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
+
+  const getTpsColor = (tps) => {
+    if (tps >= 19) return 'success';
+    if (tps >= 15) return 'warning';
+    return 'error';
+  };
+
+  const getTickTimeColor = (tickTime) => {
+    if (tickTime <= 50) return 'success';
+    if (tickTime <= 100) return 'warning';
+    return 'error';
+  };
+
+  if (loading && !status) return <CircularProgress />;
   if (!status) return <Alert severity="error">Failed to load status</Alert>;
+
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h5">Server Status: {status.status === 'online' ? 'Online' : 'Offline'}</Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Header with refresh controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" component="h1">
+          Server Status Dashboard
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={() => window.location.reload()}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={16} /> : null}
+          >
+            Refresh
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Server Status Card */}
+      <Paper sx={{ p: 3, background: status.status === 'online' ? 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)' : 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)', color: 'white' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>
+              {status.status === 'online' ? '🟢 Server Online' : '🔴 Server Offline'}
+            </Typography>
+            {status.status === 'online' && (
+              <Typography variant="body1">
+                Players: {status.online} / {status.max} • Last updated: {new Date().toLocaleTimeString()}
+              </Typography>
+            )}
+          </Box>
+          {status.status === 'online' && (
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                {status.online}
+              </Typography>
+              <Typography variant="body2">
+                Online Players
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </Paper>
+
       {status.status === 'online' && (
         <>
-          <Typography>Players Online: {status.online} / {status.max}</Typography>
-          <Typography>Players: {status.players?.join(', ') || 'None'}</Typography>
+          {/* TPS Overview Card */}
+          {status.tps && (
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                🚀 Performance Overview
+              </Typography>
+              
+              {status.tps.overall && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    Overall Server Performance
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: `linear-gradient(135deg, ${getTpsColor(status.tps.overall.meanTPS) === 'success' ? '#4caf50' : getTpsColor(status.tps.overall.meanTPS) === 'warning' ? '#ff9800' : '#f44336'} 0%, ${getTpsColor(status.tps.overall.meanTPS) === 'success' ? '#45a049' : getTpsColor(status.tps.overall.meanTPS) === 'warning' ? '#f57c00' : '#d32f2f'} 100%)`, color: 'white' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {status.tps.overall.meanTPS.toFixed(1)}
+                      </Typography>
+                      <Typography variant="body2">
+                        TPS
+                      </Typography>
+                    </Paper>
+                    <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: `linear-gradient(135deg, ${getTickTimeColor(status.tps.overall.meanTickTime) === 'success' ? '#4caf50' : getTickTimeColor(status.tps.overall.meanTickTime) === 'warning' ? '#ff9800' : '#f44336'} 0%, ${getTickTimeColor(status.tps.overall.meanTickTime) === 'success' ? '#45a049' : getTickTimeColor(status.tps.overall.meanTickTime) === 'warning' ? '#f57c00' : '#d32f2f'} 100%)`, color: 'white' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {status.tps.overall.meanTickTime.toFixed(1)}
+                      </Typography>
+                      <Typography variant="body2">
+                        ms/tick
+                      </Typography>
+                    </Paper>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Dimension-specific TPS */}
+              {status.tps.dimensions && status.tps.dimensions.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
+                    Dimension Performance
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(auto-fit, minmax(300px, 1fr))' }, gap: 2 }}>
+                    {status.tps.dimensions.map((dim, index) => (
+                      <Paper key={index} sx={{ p: 2, border: `2px solid ${getTpsColor(dim.meanTPS) === 'success' ? '#4caf50' : getTpsColor(dim.meanTPS) === 'warning' ? '#ff9800' : '#f44336'}` }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'text.secondary' }}>
+                          {dim.dimension}
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: getTpsColor(dim.meanTPS) === 'success' ? '#4caf50' : getTpsColor(dim.meanTPS) === 'warning' ? '#ff9800' : '#f44336' }}>
+                              {dim.meanTPS.toFixed(1)} TPS
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {dim.meanTickTime.toFixed(1)} ms/tick
+                            </Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Box sx={{ 
+                              width: 40, 
+                              height: 40, 
+                              borderRadius: '50%', 
+                              background: `linear-gradient(135deg, ${getTpsColor(dim.meanTPS) === 'success' ? '#4caf50' : getTpsColor(dim.meanTPS) === 'warning' ? '#ff9800' : '#f44336'} 0%, ${getTpsColor(dim.meanTPS) === 'success' ? '#45a049' : getTpsColor(dim.meanTPS) === 'warning' ? '#f57c00' : '#d32f2f'} 100%)`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontWeight: 'bold'
+                            }}>
+                              {dim.meanTPS >= 19 ? '✓' : dim.meanTPS >= 15 ? '⚠' : '✗'}
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Fallback for simple TPS format */}
+              {!status.tps.dimensions && !status.tps.overall && status.tps.meanTPS && (
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: `linear-gradient(135deg, ${getTpsColor(status.tps.meanTPS) === 'success' ? '#4caf50' : getTpsColor(status.tps.meanTPS) === 'warning' ? '#ff9800' : '#f44336'} 0%, ${getTpsColor(status.tps.meanTPS) === 'success' ? '#45a049' : getTpsColor(status.tps.meanTPS) === 'warning' ? '#f57c00' : '#d32f2f'} 100%)`, color: 'white' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                      {status.tps.meanTPS.toFixed(1)}
+                    </Typography>
+                    <Typography variant="body2">
+                      TPS
+                    </Typography>
+                  </Paper>
+                  <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: `linear-gradient(135deg, ${getTickTimeColor(status.tps.meanTickTime) === 'success' ? '#4caf50' : getTickTimeColor(status.tps.meanTickTime) === 'warning' ? '#ff9800' : '#f44336'} 0%, ${getTickTimeColor(status.tps.meanTickTime) === 'success' ? '#45a049' : getTickTimeColor(status.tps.meanTickTime) === 'warning' ? '#f57c00' : '#d32f2f'} 100%)`, color: 'white' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                      {status.tps.meanTickTime.toFixed(1)}
+                    </Typography>
+                    <Typography variant="body2">
+                      ms/tick
+                    </Typography>
+                  </Paper>
+                </Box>
+              )}
+            </Paper>
+          )}
+
+          {/* Players Card */}
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+              👥 Online Players ({status.players?.length || 0})
+            </Typography>
+            {status.players && status.players.length > 0 ? (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {status.players.map((player, index) => (
+                  <Paper key={index} sx={{ p: 1.5, px: 2, background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)', color: 'white', borderRadius: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {player}
+                    </Typography>
+                  </Paper>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                No players currently online
+              </Typography>
+            )}
+          </Paper>
+
+          {/* System Resources Card */}
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+              💾 System Resources
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              {status.ram ? (
+                <>
+                  <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)', color: 'white' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      {status.ram.used || status.ram.allocated || 'N/A'}
+                    </Typography>
+                    <Typography variant="body2">
+                      RAM Used (MB)
+                    </Typography>
+                  </Paper>
+                  {status.ram.allocated && (
+                    <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: 'linear-gradient(135deg, #673ab7 0%, #512da8 100%)', color: 'white' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                        {status.ram.allocated}
+                      </Typography>
+                      <Typography variant="body2">
+                        RAM Allocated (MB)
+                      </Typography>
+                    </Paper>
+                  )}
+                </>
+              ) : (
+                <Typography variant="body1" color="text.secondary">
+                  Memory usage data not available
+                </Typography>
+              )}
+            </Box>
+          </Paper>
         </>
       )}
-      {status.status === 'offline' && <Alert severity="error">{status.error || 'Server offline'}</Alert>}
-    </Paper>
+
+      {status.status === 'offline' && (
+        <Alert severity="error" sx={{ fontSize: '1.1rem' }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            Server Connection Failed
+          </Typography>
+          <Typography>
+            {status.error || 'Unable to connect to the Minecraft server. Please check if the server is running and the RCON connection is properly configured.'}
+          </Typography>
+        </Alert>
+      )}
+    </Box>
   );
 }
 
