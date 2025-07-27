@@ -648,7 +648,7 @@ function PlayersPage({ token }) {
       </Box>
 
       {/* Action Menu */}
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl) && selectedPlayer === player} onClose={handleClose}>
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
         {['kick', 'ban', 'whitelist-add', 'whitelist-remove'].map((action) => {
           const color = getActionColor(action);
           const actionLabels = {
