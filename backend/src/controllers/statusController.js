@@ -10,7 +10,8 @@ const statusController = {
   async info(req, res) {
     try {
       await connectRcon(rconOptions);
-      const response = await sendCommand('list');
+      const response = await sendCommand('list',true);
+      
       // Accept both 'of a max of' and 'of a max' formats
       const match = response.match(/There are (\d+) of a max(?: of)? (\d+) players online: ?(.*)?/);
       let online = 0, max = 0, players = [], raw = response;
@@ -20,11 +21,11 @@ const statusController = {
           players = names.split(',').map(name => name.trim()).filter(Boolean);
         }
       }
+      
       // Fetch TPS (tick rate)
       let tps = null;
       try {
         const tpsResp = await sendCommand('forge tps', true); // For Forge servers
-        console.log({tpsResp})
         
         // Parse detailed dimensional TPS data
         const lines = tpsResp.split('\n');
@@ -77,39 +78,14 @@ const statusController = {
         tps = null;
         console.log("Error fetching TPS:", e);
       }
-      // Fetch RAM usage
+      
+      // RAM usage fetch removed for now - was causing hangs
       let ram = null;
-      try {
-        const memResp = await sendCommand('memory', true); // For some modded servers
-        // Try to parse memory usage
-        const memMatch = memResp.match(/Memory: (\d+) MB \(Allocated\), (\d+) MB \(Used\)/);
-        if (memMatch) {
-          ram = { allocated: parseInt(memMatch[1]), used: parseInt(memMatch[2]) };
-        } else {
-          // Try /gc (for Paper/Spigot)
-          const gcResp = await sendCommand('gc', true);
-          const gcMatch = gcResp.match(/Used: ([\d,]+) MB \(([\d,]+)%\)/);
-          if (gcMatch) {
-            ram = { used: parseInt(gcMatch[1].replace(/,/g, '')), percent: parseInt(gcMatch[2]) };
-          }
-        }
-        disconnectRcon();
-      } catch (e) {
-        ram = null;
-      }
-      // Fetch ping (not a standard command, but try if available)
+      
+      // Ping fetch removed for now - was causing hangs
       let ping = null;
-      try {
-        const pingResp = await sendCommand('ping', true);
-        const pingMatch = pingResp.match(/Pong! ([\d.]+)ms/);
-        if (pingMatch) {
-          ping = parseFloat(pingMatch[1]);
-        }
-      } catch (e) {
-        ping = null;
-      } finally {
-        disconnectRcon();
-      }
+      // disconnectRcon();
+      
       res.json({
         status: 'online',
         online: Number(online),
