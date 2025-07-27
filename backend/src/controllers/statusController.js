@@ -25,20 +25,51 @@ const statusController = {
       try {
         const tpsResp = await sendCommand('forge tps', true); // For Forge servers
         console.log({tpsResp})
-        // Try to parse TPS from the response
-        const tpsMatch = tpsResp.match(/Mean tick time: ([\d.]+) ms. Mean TPS: ([\d.]+)/);
-        if (tpsMatch) {
-          tps = { meanTickTime: parseFloat(tpsMatch[1]), meanTPS: parseFloat(tpsMatch[2]) };
-        } else {
-          // Try vanilla /tps (for Paper/Spigot)
-          const vanillaTpsResp = await sendCommand('tps', true);
-          const vanillaTpsMatch = vanillaTpsResp.match(/TPS from last 1m, 5m, 15m: ([\d.]+), ([\d.]+), ([\d.]+)/);
-          if (vanillaTpsMatch) {
-            tps = {
-              last1m: parseFloat(vanillaTpsMatch[1]),
-              last5m: parseFloat(vanillaTpsMatch[2]),
-              last15m: parseFloat(vanillaTpsMatch[3])
+        
+        // Parse detailed dimensional TPS data
+        const lines = tpsResp.split('\n');
+        const dimensions = [];
+        let overall = null;
+        
+        for (const line of lines) {
+          // Parse dimension-specific TPS data
+          const dimMatch = line.match(/Dim ([^:]+):([^)]+)\): Mean tick time: ([\d.]+) ms\. Mean TPS: ([\d.]+)/);
+          if (dimMatch) {
+            dimensions.push({
+              dimension: dimMatch[1] + ':' + dimMatch[2],
+              meanTickTime: parseFloat(dimMatch[3]),
+              meanTPS: parseFloat(dimMatch[4])
+            });
+          }
+          
+          // Parse overall TPS data
+          const overallMatch = line.match(/Overall: Mean tick time: ([\d.]+) ms\. Mean TPS: ([\d.]+)/);
+          if (overallMatch) {
+            overall = {
+              meanTickTime: parseFloat(overallMatch[1]),
+              meanTPS: parseFloat(overallMatch[2])
             };
+          }
+        }
+        
+        if (dimensions.length > 0 || overall) {
+          tps = { dimensions, overall };
+        } else {
+          // Fallback to simple TPS parsing for older formats
+          const tpsMatch = tpsResp.match(/Mean tick time: ([\d.]+) ms. Mean TPS: ([\d.]+)/);
+          if (tpsMatch) {
+            tps = { meanTickTime: parseFloat(tpsMatch[1]), meanTPS: parseFloat(tpsMatch[2]) };
+          } else {
+            // Try vanilla /tps (for Paper/Spigot)
+            const vanillaTpsResp = await sendCommand('tps', true);
+            const vanillaTpsMatch = vanillaTpsResp.match(/TPS from last 1m, 5m, 15m: ([\d.]+), ([\d.]+), ([\d.]+)/);
+            if (vanillaTpsMatch) {
+              tps = {
+                last1m: parseFloat(vanillaTpsMatch[1]),
+                last5m: parseFloat(vanillaTpsMatch[2]),
+                last15m: parseFloat(vanillaTpsMatch[3])
+              };
+            }
           }
         }
         disconnectRcon();
