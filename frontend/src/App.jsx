@@ -99,7 +99,7 @@ function StatusPage() {
   if (loading && !status) return <CircularProgress />;
   if (!status) return <Alert severity="error">Failed to load status</Alert>;
 
-  return (
+    return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Header with refresh controls */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -146,172 +146,198 @@ function StatusPage() {
 
       {status.status === 'online' && (
         <>
-          {/* TPS Overview Card */}
-          {status.tps && (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                🚀 Performance Overview
-              </Typography>
-              
-              {status.tps.overall && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    Overall Server Performance
+          {/* Main Content Grid */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { 
+              xs: '1fr', 
+              md: '2fr 1fr',
+              lg: '3fr 1fr'
+            }, 
+            gap: 3 
+          }}>
+            
+            {/* Left Column - TPS Performance */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* TPS Overview Card */}
+              {status.tps && (
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                    🚀 Performance Overview
                   </Typography>
-                                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                     <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTpsColor(status.tps.overall.meanTPS)), color: 'white' }}>
-                       <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                         {status.tps.overall.meanTPS.toFixed(1)}
-                       </Typography>
-                       <Typography variant="body2">
-                         TPS
-                       </Typography>
-                     </Paper>
-                     <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTickTimeColor(status.tps.overall.meanTickTime)), color: 'white' }}>
-                       <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                         {status.tps.overall.meanTickTime.toFixed(1)}
-                       </Typography>
-                       <Typography variant="body2">
-                         ms/tick
-                       </Typography>
-                     </Paper>
-                   </Box>
-                </Box>
-              )}
+                  
+                  {status.tps.overall && (
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        Overall Server Performance
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTpsColor(status.tps.overall.meanTPS)), color: 'white' }}>
+                          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                            {status.tps.overall.meanTPS.toFixed(1)}
+                          </Typography>
+                          <Typography variant="body2">
+                            TPS
+                          </Typography>
+                        </Paper>
+                        <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTickTimeColor(status.tps.overall.meanTickTime)), color: 'white' }}>
+                          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                            {status.tps.overall.meanTickTime.toFixed(1)}
+                          </Typography>
+                          <Typography variant="body2">
+                            ms/tick
+                          </Typography>
+                        </Paper>
+                      </Box>
+                    </Box>
+                  )}
 
-              {/* Dimension-specific TPS */}
-              {status.tps.dimensions && status.tps.dimensions.length > 0 && (
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
-                    Dimension Performance
-                  </Typography>
-                                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(auto-fit, minmax(300px, 1fr))' }, gap: 2 }}>
-                     {status.tps.dimensions.map((dim, index) => {
-                       const severity = getTpsColor(dim.meanTPS);
-                       const colorMap = {
-                         success: theme.palette.success,
-                         warning: theme.palette.warning,
-                         error: theme.palette.error
-                       };
-                       const color = colorMap[severity];
-                       
-                       return (
-                         <Paper key={index} sx={{ p: 2, border: `2px solid ${color.main}` }}>
-                           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'text.secondary' }}>
-                             {dim.dimension}
-                           </Typography>
-                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <Box>
-                               <Typography variant="h6" sx={{ fontWeight: 'bold', color: color.main }}>
-                                 {dim.meanTPS.toFixed(1)} TPS
-                               </Typography>
-                               <Typography variant="body2" color="text.secondary">
-                                 {dim.meanTickTime.toFixed(1)} ms/tick
-                               </Typography>
-                             </Box>
-                             <Box sx={{ textAlign: 'right' }}>
-                               <Box sx={{ 
-                                 width: 40, 
-                                 height: 40, 
-                                 borderRadius: '50%', 
-                                 background: getPerformanceBackground(severity),
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'center',
-                                 color: 'white',
-                                 fontWeight: 'bold'
-                               }}>
-                                 {dim.meanTPS >= 19 ? '✓' : dim.meanTPS >= 15 ? '⚠' : '✗'}
-                               </Box>
-                             </Box>
-                           </Box>
-                         </Paper>
-                       );
-                     })}
-                   </Box>
-                </Box>
-              )}
+                  {/* Dimension-specific TPS */}
+                  {status.tps.dimensions && status.tps.dimensions.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
+                        Dimension Performance
+                      </Typography>
+                      <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: { 
+                          xs: '1fr', 
+                          sm: 'repeat(auto-fit, minmax(280px, 1fr))',
+                          md: '1fr'
+                        }, 
+                        gap: 2 
+                      }}>
+                        {status.tps.dimensions.map((dim, index) => {
+                          const severity = getTpsColor(dim.meanTPS);
+                          const colorMap = {
+                            success: theme.palette.success,
+                            warning: theme.palette.warning,
+                            error: theme.palette.error
+                          };
+                          const color = colorMap[severity];
+                          
+                          return (
+                            <Paper key={index} sx={{ p: 2, border: `2px solid ${color.main}` }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'text.secondary' }}>
+                                {dim.dimension}
+                              </Typography>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: color.main }}>
+                                    {dim.meanTPS.toFixed(1)} TPS
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {dim.meanTickTime.toFixed(1)} ms/tick
+                                  </Typography>
+                                </Box>
+                                <Box sx={{ textAlign: 'right' }}>
+                                  <Box sx={{ 
+                                    width: 40, 
+                                    height: 40, 
+                                    borderRadius: '50%', 
+                                    background: getPerformanceBackground(severity),
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    fontWeight: 'bold'
+                                  }}>
+                                    {dim.meanTPS >= 19 ? '✓' : dim.meanTPS >= 15 ? '⚠' : '✗'}
+                                  </Box>
+                                </Box>
+                              </Box>
+                            </Paper>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+                  )}
 
-                             {/* Fallback for simple TPS format */}
-               {!status.tps.dimensions && !status.tps.overall && status.tps.meanTPS && (
-                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                   <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTpsColor(status.tps.meanTPS)), color: 'white' }}>
-                     <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                       {status.tps.meanTPS.toFixed(1)}
-                     </Typography>
-                     <Typography variant="body2">
-                       TPS
-                     </Typography>
-                   </Paper>
-                   <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTickTimeColor(status.tps.meanTickTime)), color: 'white' }}>
-                     <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                       {status.tps.meanTickTime.toFixed(1)}
-                     </Typography>
-                     <Typography variant="body2">
-                       ms/tick
-                     </Typography>
-                   </Paper>
-                 </Box>
-               )}
-            </Paper>
-          )}
-
-          {/* Players Card */}
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-              👥 Online Players ({status.players?.length || 0})
-            </Typography>
-                         {status.players && status.players.length > 0 ? (
-               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                 {status.players.map((player, index) => (
-                   <Paper key={index} sx={{ p: 1.5, px: 2, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white', borderRadius: 2 }}>
-                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                       {player}
-                     </Typography>
-                   </Paper>
-                 ))}
-               </Box>
-             ) : (
-              <Typography variant="body1" color="text.secondary">
-                No players currently online
-              </Typography>
-            )}
-          </Paper>
-
-          {/* System Resources Card */}
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-              💾 System Resources
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                             {status.ram ? (
-                 <>
-                   <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`, color: 'white' }}>
-                     <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                       {status.ram.used || status.ram.allocated || 'N/A'}
-                     </Typography>
-                     <Typography variant="body2">
-                       RAM Used (MB)
-                     </Typography>
-                   </Paper>
-                   {status.ram.allocated && (
-                     <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`, color: 'white' }}>
-                       <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                         {status.ram.allocated}
-                       </Typography>
-                       <Typography variant="body2">
-                         RAM Allocated (MB)
-                       </Typography>
-                     </Paper>
-                   )}
-                 </>
-               ) : (
-                <Typography variant="body1" color="text.secondary">
-                  Memory usage data not available
-                </Typography>
+                  {/* Fallback for simple TPS format */}
+                  {!status.tps.dimensions && !status.tps.overall && status.tps.meanTPS && (
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTpsColor(status.tps.meanTPS)), color: 'white' }}>
+                        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                          {status.tps.meanTPS.toFixed(1)}
+                        </Typography>
+                        <Typography variant="body2">
+                          TPS
+                        </Typography>
+                      </Paper>
+                      <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTickTimeColor(status.tps.meanTickTime)), color: 'white' }}>
+                        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                          {status.tps.meanTickTime.toFixed(1)}
+                        </Typography>
+                        <Typography variant="body2">
+                          ms/tick
+                        </Typography>
+                      </Paper>
+                    </Box>
+                  )}
+                </Paper>
               )}
             </Box>
-          </Paper>
+
+            {/* Right Column - Players & Resources */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Players Card */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  👥 Online Players ({status.players?.length || 0})
+                </Typography>
+                {status.players && status.players.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {status.players.map((player, index) => (
+                      <Paper key={index} sx={{ p: 1.5, px: 2, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white', borderRadius: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          {player}
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography variant="body1" color="text.secondary">
+                    No players currently online
+                  </Typography>
+                )}
+              </Paper>
+
+              {/* System Resources Card */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  💾 System Resources
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {status.ram ? (
+                    <>
+                      <Paper sx={{ p: 2, textAlign: 'center', background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`, color: 'white' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          {status.ram.used || status.ram.allocated || 'N/A'}
+                        </Typography>
+                        <Typography variant="body2">
+                          RAM Used (MB)
+                        </Typography>
+                      </Paper>
+                      {status.ram.allocated && (
+                        <Paper sx={{ p: 2, textAlign: 'center', background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`, color: 'white' }}>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                            {status.ram.allocated}
+                          </Typography>
+                          <Typography variant="body2">
+                            RAM Allocated (MB)
+                          </Typography>
+                        </Paper>
+                      )}
+                    </>
+                  ) : (
+                    <Typography variant="body1" color="text.secondary">
+                      Memory usage data not available
+                    </Typography>
+                  )}
+                </Box>
+              </Paper>
+            </Box>
+          </Box>
         </>
       )}
 
