@@ -95,15 +95,28 @@ function StatusPage() {
   }, [autoRefresh]);
 
   const getTpsColor = (tps) => {
-    if (tps >= 19) return 'success';
-    if (tps >= 15) return 'warning';
-    return 'error';
+    if (tps >= 20.0) return 'success';      // Perfect - 20 TPS
+    if (tps >= 18.0) return 'info';         // Good - 18-19.9 TPS
+    if (tps >= 15.0) return 'warning';      // Cautious - 15-17.9 TPS
+    return 'error';                         // Bad - <15 TPS
   };
 
   const getTickTimeColor = (tickTime) => {
-    if (tickTime <= 50) return 'success';
-    if (tickTime <= 100) return 'warning';
-    return 'error';
+    if (tickTime <= 50) return 'success';   // Excellent - 0-50ms
+    if (tickTime <= 100) return 'info';     // Good - 50-100ms
+    if (tickTime <= 200) return 'warning';  // Cautious - 100-200ms
+    return 'error';                         // Bad - >200ms
+  };
+
+  const getPerformanceLabel = (tps, tickTime) => {
+    const tpsColor = getTpsColor(tps);
+    const tickColor = getTickTimeColor(tickTime);
+    
+    // Use the worse of the two metrics
+    if (tpsColor === 'error' || tickColor === 'error') return 'Critical';
+    if (tpsColor === 'warning' || tickColor === 'warning') return 'Cautious';
+    if (tpsColor === 'info' || tickColor === 'info') return 'Good';
+    return 'Excellent';
   };
 
   const getStatusBackground = (isOnline) => {
@@ -115,6 +128,7 @@ function StatusPage() {
   const getPerformanceBackground = (severity) => {
     const colorMap = {
       success: theme.palette.success,
+      info: theme.palette.info,
       warning: theme.palette.warning,
       error: theme.palette.error
     };
@@ -211,9 +225,24 @@ function StatusPage() {
                   
                   {status.tps.overall && (
                     <Box sx={{ mb: 3 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                        Overall Server Performance
-                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                          Overall Server Performance
+                        </Typography>
+                        <Paper sx={{ 
+                          px: 2, 
+                          py: 1, 
+                          background: getPerformanceBackground(getPerformanceLabel(status.tps.overall.meanTPS, status.tps.overall.meanTickTime) === 'Excellent' ? 'success' : 
+                                                              getPerformanceLabel(status.tps.overall.meanTPS, status.tps.overall.meanTickTime) === 'Good' ? 'info' :
+                                                              getPerformanceLabel(status.tps.overall.meanTPS, status.tps.overall.meanTickTime) === 'Cautious' ? 'warning' : 'error'), 
+                          color: 'white',
+                          borderRadius: 2
+                        }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {getPerformanceLabel(status.tps.overall.meanTPS, status.tps.overall.meanTickTime)}
+                          </Typography>
+                        </Paper>
+                      </Box>
                       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                         <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTpsColor(status.tps.overall.meanTPS)), color: 'white' }}>
                           <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
@@ -222,6 +251,11 @@ function StatusPage() {
                           <Typography variant="body2">
                             TPS
                           </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                            {status.tps.overall.meanTPS >= 20.0 ? 'Perfect' : 
+                             status.tps.overall.meanTPS >= 18.0 ? 'Good' : 
+                             status.tps.overall.meanTPS >= 15.0 ? 'Cautious' : 'Critical'}
+                          </Typography>
                         </Paper>
                         <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTickTimeColor(status.tps.overall.meanTickTime)), color: 'white' }}>
                           <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
@@ -229,6 +263,11 @@ function StatusPage() {
                           </Typography>
                           <Typography variant="body2">
                             ms/tick
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                            {status.tps.overall.meanTickTime <= 50 ? 'Excellent' : 
+                             status.tps.overall.meanTickTime <= 100 ? 'Good' : 
+                             status.tps.overall.meanTickTime <= 200 ? 'Cautious' : 'Critical'}
                           </Typography>
                         </Paper>
                       </Box>
@@ -251,19 +290,49 @@ function StatusPage() {
                         gap: 2 
                       }}>
                         {status.tps.dimensions.map((dim, index) => {
-                          const severity = getTpsColor(dim.meanTPS);
+                          const tpsSeverity = getTpsColor(dim.meanTPS);
+                          const tickSeverity = getTickTimeColor(dim.meanTickTime);
+                          const overallSeverity = getPerformanceLabel(dim.meanTPS, dim.meanTickTime);
+                          
                           const colorMap = {
                             success: theme.palette.success,
+                            info: theme.palette.info,
                             warning: theme.palette.warning,
                             error: theme.palette.error
                           };
-                          const color = colorMap[severity];
+                          const color = colorMap[overallSeverity === 'Excellent' ? 'success' : 
+                                                overallSeverity === 'Good' ? 'info' :
+                                                overallSeverity === 'Cautious' ? 'warning' : 'error'];
                           
                           return (
-                            <Paper key={index} sx={{ p: 2, border: `2px solid ${color.main}` }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'text.secondary' }}>
-                                {dim.dimension}
-                              </Typography>
+                            <Paper key={index} sx={{ 
+                              p: 2, 
+                              border: `2px solid ${color.main}`,
+                              background: `${color.main}05`,
+                              transition: 'all 0.2s ease-in-out',
+                              '&:hover': {
+                                background: `${color.main}10`,
+                                transform: 'translateY(-1px)'
+                              }
+                            }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
+                                  {dim.dimension}
+                                </Typography>
+                                <Paper sx={{ 
+                                  px: 1, 
+                                  py: 0.5, 
+                                  background: getPerformanceBackground(overallSeverity === 'Excellent' ? 'success' : 
+                                                                      overallSeverity === 'Good' ? 'info' :
+                                                                      overallSeverity === 'Cautious' ? 'warning' : 'error'), 
+                                  color: 'white',
+                                  borderRadius: 1
+                                }}>
+                                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                                    {overallSeverity}
+                                  </Typography>
+                                </Paper>
+                              </Box>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Box>
                                   <Typography variant="h6" sx={{ fontWeight: 'bold', color: color.main }}>
@@ -278,14 +347,18 @@ function StatusPage() {
                                     width: 40, 
                                     height: 40, 
                                     borderRadius: '50%', 
-                                    background: getPerformanceBackground(severity),
+                                    background: getPerformanceBackground(overallSeverity === 'Excellent' ? 'success' : 
+                                                                        overallSeverity === 'Good' ? 'info' :
+                                                                        overallSeverity === 'Cautious' ? 'warning' : 'error'),
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     color: 'white',
                                     fontWeight: 'bold'
                                   }}>
-                                    {dim.meanTPS >= 19 ? '✓' : dim.meanTPS >= 15 ? '⚠' : '✗'}
+                                    {overallSeverity === 'Excellent' ? '✓' : 
+                                     overallSeverity === 'Good' ? '✓' : 
+                                     overallSeverity === 'Cautious' ? '⚠' : '✗'}
                                   </Box>
                                 </Box>
                               </Box>
@@ -298,23 +371,53 @@ function StatusPage() {
 
                   {/* Fallback for simple TPS format */}
                   {!status.tps.dimensions && !status.tps.overall && status.tps.meanTPS && (
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTpsColor(status.tps.meanTPS)), color: 'white' }}>
-                        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                          {status.tps.meanTPS.toFixed(1)}
+                    <Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                          Server Performance
                         </Typography>
-                        <Typography variant="body2">
-                          TPS
-                        </Typography>
-                      </Paper>
-                      <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTickTimeColor(status.tps.meanTickTime)), color: 'white' }}>
-                        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                          {status.tps.meanTickTime.toFixed(1)}
-                        </Typography>
-                        <Typography variant="body2">
-                          ms/tick
-                        </Typography>
-                      </Paper>
+                        <Paper sx={{ 
+                          px: 2, 
+                          py: 1, 
+                          background: getPerformanceBackground(getPerformanceLabel(status.tps.meanTPS, status.tps.meanTickTime) === 'Excellent' ? 'success' : 
+                                                              getPerformanceLabel(status.tps.meanTPS, status.tps.meanTickTime) === 'Good' ? 'info' :
+                                                              getPerformanceLabel(status.tps.meanTPS, status.tps.meanTickTime) === 'Cautious' ? 'warning' : 'error'), 
+                          color: 'white',
+                          borderRadius: 2
+                        }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {getPerformanceLabel(status.tps.meanTPS, status.tps.meanTickTime)}
+                          </Typography>
+                        </Paper>
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTpsColor(status.tps.meanTPS)), color: 'white' }}>
+                          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                            {status.tps.meanTPS.toFixed(1)}
+                          </Typography>
+                          <Typography variant="body2">
+                            TPS
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                            {status.tps.meanTPS >= 20.0 ? 'Perfect' : 
+                             status.tps.meanTPS >= 18.0 ? 'Good' : 
+                             status.tps.meanTPS >= 15.0 ? 'Cautious' : 'Critical'}
+                          </Typography>
+                        </Paper>
+                        <Paper sx={{ p: 2, minWidth: 120, textAlign: 'center', background: getPerformanceBackground(getTickTimeColor(status.tps.meanTickTime)), color: 'white' }}>
+                          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                            {status.tps.meanTickTime.toFixed(1)}
+                          </Typography>
+                          <Typography variant="body2">
+                            ms/tick
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                            {status.tps.meanTickTime <= 50 ? 'Excellent' : 
+                             status.tps.meanTickTime <= 100 ? 'Good' : 
+                             status.tps.meanTickTime <= 200 ? 'Cautious' : 'Critical'}
+                          </Typography>
+                        </Paper>
+                      </Box>
                     </Box>
                   )}
                 </Paper>
