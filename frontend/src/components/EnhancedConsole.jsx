@@ -60,20 +60,17 @@ const EnhancedConsole = ({ token }) => {
     // Connect directly to the backend server
     const wsUrl = `${protocol}//localhost:3001`;
     
-    console.log('Attempting WebSocket connection to:', wsUrl);
     const websocket = new WebSocket(wsUrl);
     
     // Set a timeout for the connection
     const connectionTimeout = setTimeout(() => {
       if (websocket.readyState === WebSocket.CONNECTING) {
-        console.log('WebSocket connection timeout');
         setError('WebSocket connection timeout - using HTTP fallback');
         websocket.close();
       }
     }, 5000);
     
     websocket.onopen = () => {
-      console.log('WebSocket connected successfully');
       clearTimeout(connectionTimeout);
       setConnected(true);
       setError(null);
@@ -83,7 +80,6 @@ const EnhancedConsole = ({ token }) => {
     websocket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log('WebSocket message received:', message.type);
         handleWebSocketMessage(message);
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
@@ -91,7 +87,6 @@ const EnhancedConsole = ({ token }) => {
     };
     
     websocket.onclose = (event) => {
-      console.log('WebSocket disconnected:', event.code, event.reason);
       clearTimeout(connectionTimeout);
       setConnected(false);
       
@@ -102,7 +97,6 @@ const EnhancedConsole = ({ token }) => {
         // Attempt to reconnect if we haven't tried too many times
         if (reconnectAttempts < 3) {
           const timeout = setTimeout(() => {
-            console.log(`Attempting to reconnect (attempt ${reconnectAttempts + 1})...`);
             setReconnectAttempts(prev => prev + 1);
           }, 2000 * (reconnectAttempts + 1)); // Exponential backoff
           
@@ -112,7 +106,6 @@ const EnhancedConsole = ({ token }) => {
     };
     
     websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
       clearTimeout(connectionTimeout);
       setError('WebSocket connection failed - using HTTP fallback');
       setConnected(false);
@@ -121,11 +114,10 @@ const EnhancedConsole = ({ token }) => {
     setWs(websocket);
     
     return () => {
-      console.log('Cleaning up WebSocket connection');
       clearTimeout(connectionTimeout);
       websocket.close();
     };
-  }, [reconnectAttempts]); // Re-run effect when reconnect attempts change
+  }, []); // Remove reconnectAttempts dependency to prevent reconnection loops
 
   const handleWebSocketMessage = (message) => {
     switch (message.type) {

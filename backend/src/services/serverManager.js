@@ -50,16 +50,12 @@ class ServerManager extends EventEmitter {
         progress: 30 
       });
 
-      console.log(`Starting server from: ${resolvedServerPath}`);
-      console.log(`Using start script: ${scriptPath}`);
-
       // Start the server process with proper handling for paths with spaces
       let spawnOptions;
       
       if (process.platform === 'win32') {
         // Windows: Use cmd /c with the script name only, let cwd handle the path
         const scriptName = path.basename(scriptPath);
-        console.log(`Using script name: ${scriptName}`);
         spawnOptions = {
           command: 'cmd',
           args: ['/c', scriptName],
@@ -85,8 +81,6 @@ class ServerManager extends EventEmitter {
         };
       }
 
-      console.log('Spawn options:', JSON.stringify(spawnOptions, null, 2));
-
       this.serverProcess = spawn(
         spawnOptions.command, 
         spawnOptions.args, 
@@ -103,15 +97,12 @@ class ServerManager extends EventEmitter {
       this.startTime = Date.now();
       this.emit('statusChanged', { status: 'starting', pid: this.serverProcess.pid });
 
-      console.log(`Server process started with PID: ${this.serverProcess.pid}`);
-
       // Handle stdout
       this.serverProcess.stdout.on('data', (data) => {
         const output = data.toString().trim();
         if (output) {
           this.addLog('stdout', output);
           this.emit('consoleOutput', { type: 'stdout', data: output, timestamp: new Date() });
-          console.log(`[STDOUT] ${output}`);
           
           // Check for server startup indicators
           if (output.includes('Starting minecraft server') || output.includes('Starting server')) {
@@ -129,13 +120,11 @@ class ServerManager extends EventEmitter {
         if (output) {
           this.addLog('stderr', output);
           this.emit('consoleOutput', { type: 'stderr', data: output, timestamp: new Date() });
-          console.log(`[STDERR] ${output}`);
         }
       });
 
       // Handle process exit
       this.serverProcess.on('close', (code, signal) => {
-        console.log(`Server process closed with code: ${code}, signal: ${signal}`);
         this.isRunning = false;
         this.serverProcess = null;
         this.startTime = null;
@@ -188,8 +177,6 @@ class ServerManager extends EventEmitter {
     }
 
     try {
-      console.log(`Stopping server (graceful: ${graceful})...`);
-      
       // Emit operation status
       this.emit('operationStatus', { stopping: true });
       
@@ -203,7 +190,6 @@ class ServerManager extends EventEmitter {
         // Try graceful shutdown first via RCON
         const { sendCommand } = require('./rconService');
         try {
-          console.log('Attempting graceful shutdown via RCON...');
           this.emit('operationProgress', { 
             message: 'Attempting graceful shutdown via RCON...', 
             progress: 30 
@@ -216,7 +202,6 @@ class ServerManager extends EventEmitter {
           });
           await new Promise(resolve => setTimeout(resolve, 10000)); // Increased wait time for Forge
         } catch (error) {
-          console.log('RCON graceful shutdown failed, using force stop:', error.message);
           this.emit('operationProgress', { 
             message: 'RCON shutdown failed, using force stop...', 
             progress: 40 
@@ -226,7 +211,6 @@ class ServerManager extends EventEmitter {
 
       // Force kill if still running
       if (this.serverProcess && !this.serverProcess.killed) {
-        console.log('Sending SIGTERM to server process...');
         this.emit('operationProgress', { 
           message: 'Sending termination signal...', 
           progress: 70 
@@ -238,7 +222,6 @@ class ServerManager extends EventEmitter {
         
         // Force kill if still running
         if (this.serverProcess && !this.serverProcess.killed) {
-          console.log('Sending SIGKILL to server process...');
           this.emit('operationProgress', { 
             message: 'Force killing server process...', 
             progress: 85 
@@ -252,8 +235,6 @@ class ServerManager extends EventEmitter {
         progress: 100 
       });
 
-      console.log('Server stop completed');
-      
       // Emit operation status end
       this.emit('operationStatus', { stopping: false });
       
@@ -273,8 +254,6 @@ class ServerManager extends EventEmitter {
 
   async restartServer() {
     try {
-      console.log('Restarting server...');
-      
       // Emit operation status
       this.emit('operationStatus', { restarting: true });
       
@@ -384,7 +363,6 @@ class ServerManager extends EventEmitter {
         this.serverProcess.stdin.write(input + '\n');
         this.addLog('input', input);
         this.emit('consoleOutput', { type: 'input', data: input, timestamp: new Date() });
-        console.log(`[INPUT] ${input}`);
         return true;
       } catch (error) {
         console.error(`Failed to send input: ${error.message}`);

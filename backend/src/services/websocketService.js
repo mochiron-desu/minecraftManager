@@ -19,8 +19,6 @@ class WebSocketService {
 
   setupWebSocket() {
     this.wss.on('connection', (ws, req) => {
-      console.log('WebSocket client connected from:', req.socket.remoteAddress);
-      console.log('WebSocket headers:', req.headers);
       this.clients.add(ws);
 
       // Send initial server status
@@ -38,7 +36,6 @@ class WebSocketService {
       }));
 
       ws.on('close', (code, reason) => {
-        console.log('WebSocket client disconnected:', code, reason);
         this.clients.delete(ws);
       });
 
@@ -61,8 +58,6 @@ class WebSocketService {
     this.wss.on('error', (error) => {
       console.error('WebSocket server error:', error);
     });
-
-    console.log('WebSocket server initialized and listening for connections');
   }
 
   setupServerManagerEvents() {
