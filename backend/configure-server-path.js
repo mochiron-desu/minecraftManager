@@ -12,13 +12,15 @@ if (!serverPath) {
   console.log('  node configure-server-path.js "C:/Games/Minecraft/ForgeServer"');
   console.log('  node configure-server-path.js "../minecraft-server"');
   console.log('  node configure-server-path.js "C:/Users/YourName/Documents/Minecraft/Server"');
+  console.log('  node configure-server-path.js "C:/Program Files/Minecraft Server"');
   console.log('\nThe path can be:');
   console.log('  - Absolute path (e.g., C:/Games/Minecraft/ForgeServer)');
   console.log('  - Relative path (e.g., ../minecraft-server)');
+  console.log('  - Path with spaces (e.g., "C:/Program Files/Minecraft Server")');
   process.exit(1);
 }
 
-// Normalize the path
+// Normalize the path and handle spaces properly
 const normalizedPath = path.resolve(serverPath).replace(/\\/g, '/');
 
 console.log('Configuring server path...');
@@ -29,6 +31,7 @@ console.log('Normalized path:', normalizedPath);
 if (!fs.existsSync(normalizedPath)) {
   console.log('\n❌ Error: Server directory does not exist!');
   console.log('Please create the directory or check the path.');
+  console.log('Note: Paths with spaces are supported.');
   process.exit(1);
 }
 
@@ -71,6 +74,7 @@ try {
   const serverInfo = serverManager.getServerInfo();
   
   console.log('Server Path:', serverInfo.serverPath);
+  console.log('Resolved Path:', serverInfo.resolvedServerPath);
   console.log('Directory Exists:', serverInfo.directoryExists ? '✅' : '❌');
   console.log('Script Exists:', serverInfo.scriptExists ? '✅' : '❌');
   

@@ -3,7 +3,14 @@ const serverManager = require('./serverManager');
 
 class WebSocketService {
   constructor(server) {
-    this.wss = new WebSocket.Server({ server });
+    this.wss = new WebSocket.Server({ 
+      server,
+      // Add CORS headers for WebSocket connections
+      verifyClient: (info) => {
+        // Allow connections from any origin for development
+        return true;
+      }
+    });
     this.clients = new Set();
     
     this.setupWebSocket();
@@ -12,7 +19,8 @@ class WebSocketService {
 
   setupWebSocket() {
     this.wss.on('connection', (ws, req) => {
-      console.log('WebSocket client connected');
+      console.log('WebSocket client connected from:', req.socket.remoteAddress);
+      console.log('WebSocket headers:', req.headers);
       this.clients.add(ws);
 
       // Send initial server status
@@ -29,8 +37,8 @@ class WebSocketService {
         data: logs
       }));
 
-      ws.on('close', () => {
-        console.log('WebSocket client disconnected');
+      ws.on('close', (code, reason) => {
+        console.log('WebSocket client disconnected:', code, reason);
         this.clients.delete(ws);
       });
 
@@ -48,6 +56,13 @@ class WebSocketService {
         }
       });
     });
+
+    // Add error handling for the WebSocket server itself
+    this.wss.on('error', (error) => {
+      console.error('WebSocket server error:', error);
+    });
+
+    console.log('WebSocket server initialized and listening for connections');
   }
 
   setupServerManagerEvents() {
@@ -64,6 +79,22 @@ class WebSocketService {
       this.broadcast({
         type: 'consoleOutput',
         data: output
+      });
+    });
+
+    // Listen for operation progress updates
+    serverManager.on('operationProgress', (progress) => {
+      this.broadcast({
+        type: 'operationProgress',
+        data: progress
+      });
+    });
+
+    // Listen for operation status updates
+    serverManager.on('operationStatus', (status) => {
+      this.broadcast({
+        type: 'operationStatus',
+        data: status
       });
     });
   }

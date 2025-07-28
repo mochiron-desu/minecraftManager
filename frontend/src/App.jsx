@@ -49,7 +49,7 @@ function ProtectedRoute({ token, children }) {
   return children;
 }
 
-function StatusPage() {
+function StatusPage({ token }) {
   const theme = useTheme();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -148,6 +148,7 @@ function StatusPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
       
@@ -172,6 +173,7 @@ function StatusPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ graceful: true }),
       });
@@ -197,6 +199,7 @@ function StatusPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
       
@@ -1481,7 +1484,7 @@ function App() {
         <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
           <Toolbar />
           <Routes>
-            <Route path="/" element={<StatusPage />} />
+            <Route path="/" element={<StatusPage token={token} />} />
             <Route path="/players" element={<ProtectedRoute token={token}><PlayersPage token={token} /></ProtectedRoute>} />
             <Route path="/console" element={<ProtectedRoute token={token}><ConsolePage token={token} /></ProtectedRoute>} />
             <Route path="/enhanced-console" element={<ProtectedRoute token={token}><EnhancedConsole token={token} /></ProtectedRoute>} />

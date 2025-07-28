@@ -21,7 +21,18 @@ class ServerManager extends EventEmitter {
     }
 
     try {
-      const scriptPath = path.join(this.serverPath, this.startScript);
+      // Emit operation status
+      this.emit('operationStatus', { starting: true });
+      
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Initializing server startup...', 
+        progress: 10 
+      });
+
+      // Resolve the server path to handle relative paths and spaces
+      const resolvedServerPath = path.resolve(this.serverPath);
+      const scriptPath = path.join(resolvedServerPath, this.startScript);
       
       // Check if the start script exists
       if (!fs.existsSync(scriptPath)) {
@@ -29,20 +40,63 @@ class ServerManager extends EventEmitter {
       }
 
       // Check if server directory exists
-      if (!fs.existsSync(this.serverPath)) {
-        throw new Error(`Server directory not found: ${this.serverPath}`);
+      if (!fs.existsSync(resolvedServerPath)) {
+        throw new Error(`Server directory not found: ${resolvedServerPath}`);
       }
 
-      console.log(`Starting server from: ${this.serverPath}`);
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Starting server process...', 
+        progress: 30 
+      });
+
+      console.log(`Starting server from: ${resolvedServerPath}`);
       console.log(`Using start script: ${scriptPath}`);
 
-      // Start the server process
-      this.serverProcess = spawn(scriptPath, [], {
-        cwd: this.serverPath,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        shell: true,
-        windowsHide: true,
-        env: { ...process.env }
+      // Start the server process with proper handling for paths with spaces
+      let spawnOptions;
+      
+      if (process.platform === 'win32') {
+        // Windows: Use cmd /c with the script name only, let cwd handle the path
+        const scriptName = path.basename(scriptPath);
+        console.log(`Using script name: ${scriptName}`);
+        spawnOptions = {
+          command: 'cmd',
+          args: ['/c', scriptName],
+          options: {
+            cwd: resolvedServerPath,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: false,
+            windowsHide: true,
+            env: { ...process.env }
+          }
+        };
+      } else {
+        // Unix-like: Use shell with proper quoting
+        spawnOptions = {
+          command: scriptPath,
+          args: [],
+          options: {
+            cwd: resolvedServerPath,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: true,
+            env: { ...process.env }
+          }
+        };
+      }
+
+      console.log('Spawn options:', JSON.stringify(spawnOptions, null, 2));
+
+      this.serverProcess = spawn(
+        spawnOptions.command, 
+        spawnOptions.args, 
+        spawnOptions.options
+      );
+
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Server process started, waiting for initialization...', 
+        progress: 60 
       });
 
       this.isRunning = true;
@@ -58,6 +112,14 @@ class ServerManager extends EventEmitter {
           this.addLog('stdout', output);
           this.emit('consoleOutput', { type: 'stdout', data: output, timestamp: new Date() });
           console.log(`[STDOUT] ${output}`);
+          
+          // Check for server startup indicators
+          if (output.includes('Starting minecraft server') || output.includes('Starting server')) {
+            this.emit('operationProgress', { 
+              message: 'Minecraft server starting up...', 
+              progress: 80 
+            });
+          }
         }
       });
 
@@ -97,6 +159,12 @@ class ServerManager extends EventEmitter {
         });
       });
 
+      // Emit final progress update
+      this.emit('operationProgress', { 
+        message: 'Server startup initiated successfully', 
+        progress: 90 
+      });
+
       return { success: true, pid: this.serverProcess.pid };
 
     } catch (error) {
@@ -104,6 +172,12 @@ class ServerManager extends EventEmitter {
       this.isRunning = false;
       this.serverProcess = null;
       this.startTime = null;
+      this.emit('operationProgress', { 
+        message: `Startup failed: ${error.message}`, 
+        progress: 0 
+      });
+      // Emit operation status end
+      this.emit('operationStatus', { starting: false });
       throw error;
     }
   }
@@ -115,23 +189,48 @@ class ServerManager extends EventEmitter {
 
     try {
       console.log(`Stopping server (graceful: ${graceful})...`);
+      
+      // Emit operation status
+      this.emit('operationStatus', { stopping: true });
+      
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Initiating server shutdown...', 
+        progress: 10 
+      });
 
       if (graceful) {
         // Try graceful shutdown first via RCON
         const { sendCommand } = require('./rconService');
         try {
           console.log('Attempting graceful shutdown via RCON...');
+          this.emit('operationProgress', { 
+            message: 'Attempting graceful shutdown via RCON...', 
+            progress: 30 
+          });
           await sendCommand('stop');
           // Wait a bit for graceful shutdown
+          this.emit('operationProgress', { 
+            message: 'Waiting for graceful shutdown...', 
+            progress: 60 
+          });
           await new Promise(resolve => setTimeout(resolve, 10000)); // Increased wait time for Forge
         } catch (error) {
           console.log('RCON graceful shutdown failed, using force stop:', error.message);
+          this.emit('operationProgress', { 
+            message: 'RCON shutdown failed, using force stop...', 
+            progress: 40 
+          });
         }
       }
 
       // Force kill if still running
       if (this.serverProcess && !this.serverProcess.killed) {
         console.log('Sending SIGTERM to server process...');
+        this.emit('operationProgress', { 
+          message: 'Sending termination signal...', 
+          progress: 70 
+        });
         this.serverProcess.kill('SIGTERM');
         
         // Wait for graceful termination
@@ -140,15 +239,34 @@ class ServerManager extends EventEmitter {
         // Force kill if still running
         if (this.serverProcess && !this.serverProcess.killed) {
           console.log('Sending SIGKILL to server process...');
+          this.emit('operationProgress', { 
+            message: 'Force killing server process...', 
+            progress: 85 
+          });
           this.serverProcess.kill('SIGKILL');
         }
       }
 
+      this.emit('operationProgress', { 
+        message: 'Server shutdown completed', 
+        progress: 100 
+      });
+
       console.log('Server stop completed');
+      
+      // Emit operation status end
+      this.emit('operationStatus', { stopping: false });
+      
       return { success: true };
 
     } catch (error) {
       console.error(`Failed to stop server: ${error.message}`);
+      this.emit('operationProgress', { 
+        message: `Stop failed: ${error.message}`, 
+        progress: 0 
+      });
+      // Emit operation status end
+      this.emit('operationStatus', { stopping: false });
       throw error;
     }
   }
@@ -156,24 +274,67 @@ class ServerManager extends EventEmitter {
   async restartServer() {
     try {
       console.log('Restarting server...');
+      
+      // Emit operation status
+      this.emit('operationStatus', { restarting: true });
+      
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Initiating server restart...', 
+        progress: 10 
+      });
+      
       await this.stopServer();
+      
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Server stopped, waiting before restart...', 
+        progress: 50 
+      });
+      
       // Wait a bit before restarting
       await new Promise(resolve => setTimeout(resolve, 3000));
-      return await this.startServer();
+      
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Starting server after restart...', 
+        progress: 70 
+      });
+      
+      const result = await this.startServer();
+      
+      // Emit progress update
+      this.emit('operationProgress', { 
+        message: 'Server restart completed', 
+        progress: 100 
+      });
+      
+      // Emit operation status end
+      this.emit('operationStatus', { restarting: false });
+      
+      return result;
     } catch (error) {
       console.error(`Failed to restart server: ${error.message}`);
+      this.emit('operationProgress', { 
+        message: `Restart failed: ${error.message}`, 
+        progress: 0 
+      });
+      // Emit operation status end
+      this.emit('operationStatus', { restarting: false });
       throw error;
     }
   }
 
   getStatus() {
     const uptime = this.startTime ? Date.now() - this.startTime : null;
+    const resolvedServerPath = path.resolve(this.serverPath);
     return {
       isRunning: this.isRunning,
       pid: this.serverProcess?.pid || null,
       uptime: uptime,
       uptimeFormatted: uptime ? this.formatUptime(uptime) : null,
       serverPath: this.serverPath,
+      resolvedServerPath: resolvedServerPath,
       startScript: this.startScript
     };
   }
@@ -211,7 +372,9 @@ class ServerManager extends EventEmitter {
   }
 
   clearLogs() {
+    this.emit('operationStatus', { clearing: true });
     this.logBuffer = [];
+    this.emit('operationStatus', { clearing: false });
   }
 
   // Send input to the server process
@@ -233,11 +396,13 @@ class ServerManager extends EventEmitter {
 
   // Get server info
   getServerInfo() {
+    const resolvedServerPath = path.resolve(this.serverPath);
     return {
       serverPath: this.serverPath,
+      resolvedServerPath: resolvedServerPath,
       startScript: this.startScript,
-      scriptExists: fs.existsSync(path.join(this.serverPath, this.startScript)),
-      directoryExists: fs.existsSync(this.serverPath)
+      scriptExists: fs.existsSync(path.join(resolvedServerPath, this.startScript)),
+      directoryExists: fs.existsSync(resolvedServerPath)
     };
   }
 }
