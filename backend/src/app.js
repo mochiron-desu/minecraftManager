@@ -4,6 +4,7 @@ const authRoutes = require('./routes/auth');
 const consoleRoutes = require('./routes/console');
 const playerRoutes = require('./routes/players');
 const statusRoutes = require('./routes/status');
+const serverRoutes = require('./routes/server');
 const rateLimit = require('./middleware/rateLimit');
 const validateInput = require('./middleware/validateInput');
 
@@ -17,6 +18,7 @@ app.use('/api/auth', validateInput, authRoutes);
 app.use('/api/console', consoleRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/status', statusRoutes);
+app.use('/api/server', serverRoutes);
 
 // TODO: Add error handling middleware
 

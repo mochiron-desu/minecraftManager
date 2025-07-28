@@ -1,2 +1,3 @@
 # Ignore persistent user data
 /data/users.json 
+.env.backup

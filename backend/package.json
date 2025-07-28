@@ -18,6 +18,7 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^2.6.7",
-    "rcon-client": "^4.2.5"
+    "rcon-client": "^4.2.5",
+    "ws": "^8.18.3"
   }
 }

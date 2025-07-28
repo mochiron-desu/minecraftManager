@@ -6,7 +6,11 @@ import PeopleIcon from '@mui/icons-material/People';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import LoginIcon from '@mui/icons-material/Login';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useState, useEffect } from 'react';
+import EnhancedConsole from './components/EnhancedConsole';
 
 const drawerWidth = 220;
 
@@ -52,6 +56,7 @@ function StatusPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastFetch, setLastFetch] = useState(0);
   const [error, setError] = useState(null);
+  const [serverLoading, setServerLoading] = useState(false);
 
   const fetchStatus = async (force = false) => {
     // Don't fetch if we have recent data (within 30 seconds) unless forced
@@ -136,6 +141,79 @@ function StatusPage() {
     return `linear-gradient(135deg, ${color.main} 0%, ${color.dark} 100%)`;
   };
 
+  const startServer = async () => {
+    try {
+      setServerLoading(true);
+      const response = await fetch('/api/server/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Server start response:', data);
+      fetchStatus(true);
+    } catch (error) {
+      setError(`Failed to start server: ${error.message}`);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
+  const stopServer = async () => {
+    try {
+      setServerLoading(true);
+      const response = await fetch('/api/server/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ graceful: true }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Server stop response:', data);
+      fetchStatus(true);
+    } catch (error) {
+      setError(`Failed to stop server: ${error.message}`);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
+  const restartServer = async () => {
+    try {
+      setServerLoading(true);
+      const response = await fetch('/api/server/restart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Server restart response:', data);
+      fetchStatus(true);
+    } catch (error) {
+      setError(`Failed to restart server: ${error.message}`);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
   if (loading && !status) return <CircularProgress />;
   if (error) return (
     <Alert severity="error" sx={{ fontSize: '1.1rem' }}>
@@ -187,18 +265,77 @@ function StatusPage() {
                 Players: {status.online} / {status.max} • Last updated: {new Date().toLocaleTimeString()}
               </Typography>
             )}
+            {status.managed && (
+              <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                Managed by backend
+              </Typography>
+            )}
           </Box>
-          {status.status === 'online' && (
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                {status.online}
-              </Typography>
-              <Typography variant="body2">
-                Online Players
-              </Typography>
-            </Box>
-          )}
+          <Box sx={{ textAlign: 'right' }}>
+            {status.status === 'online' ? (
+              <>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                  {status.online}
+                </Typography>
+                <Typography variant="body2">
+                  Online Players
+                </Typography>
+              </>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<PlayArrowIcon />}
+                  onClick={startServer}
+                  disabled={serverLoading}
+                  size="small"
+                >
+                  Start Server
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={restartServer}
+                  disabled={serverLoading}
+                  size="small"
+                  sx={{ color: 'white', borderColor: 'white' }}
+                >
+                  Restart
+                </Button>
+              </Box>
+            )}
+          </Box>
         </Box>
+        
+        {/* Server Controls for Online Server */}
+        {status.status === 'online' && status.managed && (
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<StopIcon />}
+                onClick={stopServer}
+                disabled={serverLoading}
+                size="small"
+                sx={{ color: 'white', borderColor: 'white' }}
+              >
+                Stop Server
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={restartServer}
+                disabled={serverLoading}
+                size="small"
+                sx={{ color: 'white', borderColor: 'white' }}
+              >
+                Restart Server
+              </Button>
+            </Box>
+          </Box>
+        )}
       </Paper>
 
       {status.status === 'online' && (
@@ -1289,6 +1426,10 @@ function App() {
           <ListItemIcon><TerminalIcon /></ListItemIcon>
           <ListItemText primary="Console" />
         </ListItem>
+        <ListItem button component={Link} to="/enhanced-console" onClick={() => setMobileOpen(false)}>
+          <ListItemIcon><TerminalIcon /></ListItemIcon>
+          <ListItemText primary="Enhanced Console" />
+        </ListItem>
         {!token && (
           <ListItem button component={Link} to="/login" onClick={() => setMobileOpen(false)}>
             <ListItemIcon><LoginIcon /></ListItemIcon>
@@ -1343,6 +1484,7 @@ function App() {
             <Route path="/" element={<StatusPage />} />
             <Route path="/players" element={<ProtectedRoute token={token}><PlayersPage token={token} /></ProtectedRoute>} />
             <Route path="/console" element={<ProtectedRoute token={token}><ConsolePage token={token} /></ProtectedRoute>} />
+            <Route path="/enhanced-console" element={<ProtectedRoute token={token}><EnhancedConsole token={token} /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage login={login} token={token} />} />
           </Routes>
         </Box>
