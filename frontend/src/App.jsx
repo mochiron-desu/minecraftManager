@@ -1,12 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
-import { CssBaseline, Box, Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar, AppBar, Typography, IconButton, Button, TextField, Paper, Divider, Snackbar, Alert, CircularProgress, ListItemSecondaryAction, Menu, MenuItem, useTheme } from '@mui/material';
+import { CssBaseline, Box, Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar, AppBar, Typography, IconButton, Button, TextField, Paper, Divider, Snackbar, Alert, CircularProgress, ListItemSecondaryAction, Menu, MenuItem, useTheme, Chip } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import LoginIcon from '@mui/icons-material/Login';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useState, useEffect } from 'react';
+import EnhancedConsole from './components/EnhancedConsole';
 
 const drawerWidth = 220;
 
@@ -45,13 +49,14 @@ function ProtectedRoute({ token, children }) {
   return children;
 }
 
-function StatusPage() {
+function StatusPage({ token }) {
   const theme = useTheme();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastFetch, setLastFetch] = useState(0);
   const [error, setError] = useState(null);
+  const [serverLoading, setServerLoading] = useState(false);
 
   const fetchStatus = async (force = false) => {
     // Don't fetch if we have recent data (within 30 seconds) unless forced
@@ -136,6 +141,82 @@ function StatusPage() {
     return `linear-gradient(135deg, ${color.main} 0%, ${color.dark} 100%)`;
   };
 
+  const startServer = async () => {
+    try {
+      setServerLoading(true);
+      const response = await fetch('/api/server/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Server start response:', data);
+      fetchStatus(true);
+    } catch (error) {
+      setError(`Failed to start server: ${error.message}`);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
+  const stopServer = async () => {
+    try {
+      setServerLoading(true);
+      const response = await fetch('/api/server/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ graceful: true }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Server stop response:', data);
+      fetchStatus(true);
+    } catch (error) {
+      setError(`Failed to stop server: ${error.message}`);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
+  const restartServer = async () => {
+    try {
+      setServerLoading(true);
+      const response = await fetch('/api/server/restart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Server restart response:', data);
+      fetchStatus(true);
+    } catch (error) {
+      setError(`Failed to restart server: ${error.message}`);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
   if (loading && !status) return <CircularProgress />;
   if (error) return (
     <Alert severity="error" sx={{ fontSize: '1.1rem' }}>
@@ -187,18 +268,77 @@ function StatusPage() {
                 Players: {status.online} / {status.max} • Last updated: {new Date().toLocaleTimeString()}
               </Typography>
             )}
+            {status.managed && (
+              <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                Managed by backend
+              </Typography>
+            )}
           </Box>
-          {status.status === 'online' && (
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
-                {status.online}
-              </Typography>
-              <Typography variant="body2">
-                Online Players
-              </Typography>
-            </Box>
-          )}
+          <Box sx={{ textAlign: 'right' }}>
+            {status.status === 'online' ? (
+              <>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                  {status.online}
+                </Typography>
+                <Typography variant="body2">
+                  Online Players
+                </Typography>
+              </>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<PlayArrowIcon />}
+                  onClick={startServer}
+                  disabled={serverLoading}
+                  size="small"
+                >
+                  Start Server
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={restartServer}
+                  disabled={serverLoading}
+                  size="small"
+                  sx={{ color: 'white', borderColor: 'white' }}
+                >
+                  Restart
+                </Button>
+              </Box>
+            )}
+          </Box>
         </Box>
+        
+        {/* Server Controls for Online Server */}
+        {status.status === 'online' && status.managed && (
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<StopIcon />}
+                onClick={stopServer}
+                disabled={serverLoading}
+                size="small"
+                sx={{ color: 'white', borderColor: 'white' }}
+              >
+                Stop Server
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={restartServer}
+                disabled={serverLoading}
+                size="small"
+                sx={{ color: 'white', borderColor: 'white' }}
+              >
+                Restart Server
+              </Button>
+            </Box>
+          </Box>
+        )}
       </Paper>
 
       {status.status === 'online' && (
@@ -488,14 +628,220 @@ function StatusPage() {
       )}
 
       {status.status === 'offline' && (
-        <Alert severity="error" sx={{ fontSize: '1.1rem' }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            Server Connection Failed
-          </Typography>
-          <Typography>
-            {status.error || 'Unable to connect to the Minecraft server. Please check if the server is running and the RCON connection is properly configured.'}
-          </Typography>
-        </Alert>
+        <>
+          {/* Offline State - Main Content */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { 
+              xs: '1fr', 
+              md: '2fr 1fr',
+              lg: '3fr 1fr'
+            }, 
+            gap: 3 
+          }}>
+            
+            {/* Left Column - Server Information */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Server Status Card */}
+              <Paper sx={{ p: 3, background: getStatusBackground(false), color: 'white' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      🔴 Server Offline
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      The Minecraft server is currently not running
+                    </Typography>
+                    {status.error && (
+                      <Typography variant="body2" sx={{ opacity: 0.8, fontStyle: 'italic' }}>
+                        Error: {status.error}
+                      </Typography>
+                    )}
+                    {status.managed && (
+                      <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                        Managed by backend
+                      </Typography>
+                    )}
+                  </Box>
+                  <Box sx={{ textAlign: 'right' }}>
+                    <Typography variant="h3" sx={{ fontWeight: 'bold', opacity: 0.5 }}>
+                      0
+                    </Typography>
+                    <Typography variant="body2">
+                      Online Players
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Connection Information Card */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  🔌 Connection Information
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body1" color="text.secondary">
+                      Server Status
+                    </Typography>
+                    <Chip label="Offline" color="error" size="small" />
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body1" color="text.secondary">
+                      Last Check
+                    </Typography>
+                    <Typography variant="body2">
+                      {new Date().toLocaleTimeString()}
+                    </Typography>
+                  </Box>
+                  {status.managed && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body1" color="text.secondary">
+                        Management
+                      </Typography>
+                      <Chip label="Backend Managed" color="info" size="small" />
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+
+              {/* Troubleshooting Card */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  🔧 Troubleshooting
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      If the server should be running, check the following:
+                    </Typography>
+                  </Alert>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>•</span> Server process is not running
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>•</span> RCON connection is not configured
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>•</span> Server crashed or stopped unexpectedly
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>•</span> Network connectivity issues
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            </Box>
+
+            {/* Right Column - Quick Actions */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Quick Actions Card */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  ⚡ Quick Actions
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {status.managed && (
+                    <>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<PlayArrowIcon />}
+                        onClick={startServer}
+                        disabled={serverLoading}
+                        fullWidth
+                        sx={{ py: 1.5 }}
+                      >
+                        {serverLoading ? 'Starting...' : 'Start Server'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<RefreshIcon />}
+                        onClick={restartServer}
+                        disabled={serverLoading}
+                        fullWidth
+                        sx={{ py: 1.5 }}
+                      >
+                        {serverLoading ? 'Restarting...' : 'Restart Server'}
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="outlined"
+                    onClick={() => fetchStatus(true)}
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+                    fullWidth
+                    sx={{ py: 1.5 }}
+                  >
+                    {loading ? 'Refreshing...' : 'Refresh Status'}
+                  </Button>
+                </Box>
+              </Paper>
+
+              {/* Server Details Card */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  📋 Server Details
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Players Online
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      0 / 0
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Server Performance
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      N/A
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Memory Usage
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      N/A
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Uptime
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      N/A
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Enhanced Console Link */}
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                  🖥️ Console Access
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Access the enhanced console for detailed server management and real-time monitoring.
+                </Typography>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  component={Link}
+                  to="/enhanced-console"
+                  sx={{ py: 1.5 }}
+                >
+                  Open Enhanced Console
+                </Button>
+              </Paper>
+            </Box>
+          </Box>
+        </>
       )}
     </Box>
   );
@@ -1289,6 +1635,10 @@ function App() {
           <ListItemIcon><TerminalIcon /></ListItemIcon>
           <ListItemText primary="Console" />
         </ListItem>
+        <ListItem button component={Link} to="/enhanced-console" onClick={() => setMobileOpen(false)}>
+          <ListItemIcon><TerminalIcon /></ListItemIcon>
+          <ListItemText primary="Enhanced Console" />
+        </ListItem>
         {!token && (
           <ListItem button component={Link} to="/login" onClick={() => setMobileOpen(false)}>
             <ListItemIcon><LoginIcon /></ListItemIcon>
@@ -1340,9 +1690,10 @@ function App() {
         <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
           <Toolbar />
           <Routes>
-            <Route path="/" element={<StatusPage />} />
+            <Route path="/" element={<StatusPage token={token} />} />
             <Route path="/players" element={<ProtectedRoute token={token}><PlayersPage token={token} /></ProtectedRoute>} />
             <Route path="/console" element={<ProtectedRoute token={token}><ConsolePage token={token} /></ProtectedRoute>} />
+            <Route path="/enhanced-console" element={<ProtectedRoute token={token}><EnhancedConsole token={token} /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage login={login} token={token} />} />
           </Routes>
         </Box>
