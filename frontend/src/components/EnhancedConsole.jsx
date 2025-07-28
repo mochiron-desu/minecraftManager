@@ -105,7 +105,7 @@ const EnhancedConsole = ({ token }) => {
       }
     };
     
-    websocket.onerror = (error) => {
+    websocket.onerror = () => {
       clearTimeout(connectionTimeout);
       setError('WebSocket connection failed - using HTTP fallback');
       setConnected(false);
@@ -405,36 +405,63 @@ const EnhancedConsole = ({ token }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, height: '100%' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1">
-          Enhanced Console
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Chip 
-            label={connected ? 'Connected' : 'Disconnected'} 
-            color={connected ? 'success' : 'error'}
-            size="small"
-          />
-          <Chip 
-            label={serverStatus.isRunning ? 'Running' : 'Stopped'} 
-            color={serverStatus.isRunning ? 'success' : 'default'}
-            size="small"
-          />
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: { xs: 1, sm: 2 }, 
+      height: '100vh',
+      p: { xs: 1, sm: 2, md: 3 },
+      backgroundColor: '#f5f5f5',
+      overflow: 'hidden'
+    }}>
+      {/* Header Section */}
+      <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          gap: { xs: 1, sm: 0 },
+          mb: 1 
+        }}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 'bold', 
+              color: '#1976d2',
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+            }}
+          >
+            Enhanced Console
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Chip 
+              label={connected ? 'Connected' : 'Disconnected'} 
+              color={connected ? 'success' : 'error'}
+              size="small"
+              sx={{ fontWeight: 'medium', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+            />
+            <Chip 
+              label={serverStatus.isRunning ? 'Running' : 'Stopped'} 
+              color={serverStatus.isRunning ? 'success' : 'default'}
+              size="small"
+              sx={{ fontWeight: 'medium', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+            />
+          </Box>
         </Box>
-      </Box>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" onClose={() => setError(null)} sx={{ mt: 1 }}>
+            {error}
+          </Alert>
+        )}
+      </Paper>
 
-      {/* Server Controls */}
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
+      {/* Server Controls Section */}
+      <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#333' }}>
           Server Controls
         </Typography>
         
@@ -442,68 +469,120 @@ const EnhancedConsole = ({ token }) => {
         {(operationProgress.message || operationProgress.progress > 0) && (
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'medium' }}>
                 {operationProgress.message}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'medium' }}>
                 {operationProgress.progress}%
               </Typography>
             </Box>
             <LinearProgress 
               variant="determinate" 
               value={operationProgress.progress} 
-              sx={{ height: 6, borderRadius: 3 }}
+              sx={{ height: 8, borderRadius: 4 }}
             />
           </Box>
         )}
         
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: { xs: 1, sm: 2 }, 
+          flexWrap: 'wrap',
+          justifyContent: { xs: 'center', sm: 'flex-start' }
+        }}>
           <Button
             variant="contained"
             color="success"
-            startIcon={operationStatus.starting ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+            startIcon={operationStatus.starting ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
             onClick={startServer}
             disabled={operationStatus.starting || operationStatus.stopping || operationStatus.restarting || serverStatus.isRunning}
+            sx={{ 
+              minWidth: { xs: '120px', sm: '140px' }, 
+              fontWeight: 'medium',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
           >
             {operationStatus.starting ? 'Starting...' : 'Start Server'}
           </Button>
           <Button
             variant="contained"
             color="error"
-            startIcon={operationStatus.stopping ? <CircularProgress size={16} color="inherit" /> : <StopIcon />}
+            startIcon={operationStatus.stopping ? <CircularProgress size={18} color="inherit" /> : <StopIcon />}
             onClick={stopServer}
             disabled={operationStatus.starting || operationStatus.stopping || operationStatus.restarting || !serverStatus.isRunning}
+            sx={{ 
+              minWidth: { xs: '120px', sm: '140px' }, 
+              fontWeight: 'medium',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
           >
             {operationStatus.stopping ? 'Stopping...' : 'Stop Server'}
           </Button>
           <Button
             variant="outlined"
-            startIcon={operationStatus.restarting ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+            startIcon={operationStatus.restarting ? <CircularProgress size={18} color="inherit" /> : <RefreshIcon />}
             onClick={restartServer}
             disabled={operationStatus.starting || operationStatus.stopping || operationStatus.restarting}
+            sx={{ 
+              minWidth: { xs: '120px', sm: '140px' }, 
+              fontWeight: 'medium',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
           >
             {operationStatus.restarting ? 'Restarting...' : 'Restart Server'}
           </Button>
           <Button
             variant="outlined"
-            startIcon={operationStatus.clearing ? <CircularProgress size={16} color="inherit" /> : <ClearIcon />}
+            startIcon={operationStatus.clearing ? <CircularProgress size={18} color="inherit" /> : <ClearIcon />}
             onClick={clearLogs}
             disabled={operationStatus.starting || operationStatus.stopping || operationStatus.restarting || operationStatus.clearing}
+            sx={{ 
+              minWidth: { xs: '120px', sm: '140px' }, 
+              fontWeight: 'medium',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
           >
             {operationStatus.clearing ? 'Clearing...' : 'Clear Logs'}
           </Button>
         </Box>
       </Paper>
 
-      <Grid container spacing={3} sx={{ flex: 1, minHeight: 0 }}>
-        {/* Console Output */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
+      {/* Main Content Section */}
+      <Box sx={{ 
+        flex: 1, 
+        display: 'flex', 
+        flexDirection: { xs: 'column', lg: 'row' },
+        gap: { xs: 2, lg: 3 }, 
+        minHeight: 0, 
+        overflow: 'hidden' 
+      }}>
+        {/* Console Output Section */}
+        <Box sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          minHeight: 0,
+          order: { xs: 2, lg: 1 }
+        }}>
+          <Paper sx={{ p: { xs: 1, sm: 2 }, height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between', 
+              alignItems: { xs: 'flex-start', sm: 'center' }, 
+              mb: 2, 
+              flexShrink: 0,
+              gap: { xs: 1, sm: 0 }
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#333' }}>
                 Console Output ({getFilteredLogs().length} lines)
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: { xs: 1, sm: 2 }, 
+                alignItems: 'center',
+                flexWrap: 'wrap'
+              }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -513,6 +592,11 @@ const EnhancedConsole = ({ token }) => {
                     />
                   }
                   label="Auto-scroll"
+                  sx={{ 
+                    '& .MuiFormControlLabel-label': { 
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' } 
+                    } 
+                  }}
                 />
                 <FormControlLabel
                   control={
@@ -523,12 +607,23 @@ const EnhancedConsole = ({ token }) => {
                     />
                   }
                   label="Timestamps"
+                  sx={{ 
+                    '& .MuiFormControlLabel-label': { 
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' } 
+                    } 
+                  }}
                 />
               </Box>
             </Box>
 
             {/* Filter Controls */}
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1, 
+              mb: 2, 
+              flexShrink: 0,
+              flexWrap: 'wrap'
+            }}>
               {['all', 'stdout', 'stderr', 'input'].map((type) => (
                 <Chip
                   key={type}
@@ -536,6 +631,10 @@ const EnhancedConsole = ({ token }) => {
                   color={filterType === type ? 'primary' : 'default'}
                   onClick={() => setFilterType(type)}
                   size="small"
+                  sx={{ 
+                    fontWeight: 'medium',
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                  }}
                 />
               ))}
             </Box>
@@ -549,10 +648,24 @@ const EnhancedConsole = ({ token }) => {
                 background: 'black',
                 color: 'white',
                 fontFamily: 'monospace',
-                fontSize: '0.875rem',
-                p: 2,
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                p: { xs: 1, sm: 2 },
                 borderRadius: 1,
-                minHeight: 400,
+                border: '1px solid #333',
+                minHeight: { xs: 200, sm: 0 },
+                '&::-webkit-scrollbar': {
+                  width: { xs: '6px', sm: '10px' },
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#2a2a2a',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#555',
+                  borderRadius: '5px',
+                  '&:hover': {
+                    background: '#777',
+                  },
+                },
               }}
             >
               {getFilteredLogs().length === 0 ? (
@@ -571,7 +684,11 @@ const EnhancedConsole = ({ token }) => {
                       label={log.type}
                       size="small"
                       color={getLogTypeColor(log.type)}
-                      sx={{ mr: 1, height: 16, fontSize: '0.7rem' }}
+                      sx={{ 
+                        mr: 1, 
+                        height: { xs: 16, sm: 18 }, 
+                        fontSize: { xs: '0.6rem', sm: '0.7rem' } 
+                      }}
                     />
                     <span style={{ 
                       color: log.type === 'stderr' ? '#ff6b6b' : 
@@ -584,109 +701,161 @@ const EnhancedConsole = ({ token }) => {
               )}
             </Box>
           </Paper>
-        </Grid>
+        </Box>
 
-        {/* Command Input & Controls */}
-        <Grid item xs={12} md={4}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: '100%' }}>
-            {/* Command Input */}
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Command Input
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                  ref={commandInputRef}
-                  fullWidth
+        {/* Sidebar Section */}
+        <Box sx={{ 
+          width: { xs: '100%', lg: 350 }, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: { xs: 1, sm: 2 }, 
+          minHeight: 0,
+          order: { xs: 1, lg: 2 },
+          flex: { xs: 'none', lg: 'none' }
+        }}>
+          {/* Command Input */}
+          <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: '#333', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Command Input
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+              <TextField
+                ref={commandInputRef}
+                fullWidth
+                size="small"
+                placeholder="Enter command..."
+                value={command}
+                onChange={(e) => setCommand(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={loading || !serverStatus.isRunning}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontFamily: 'monospace',
+                  }
+                }}
+              />
+              <IconButton
+                onClick={sendCommand}
+                disabled={loading || !command.trim() || !serverStatus.isRunning}
+                color="primary"
+                sx={{ 
+                  backgroundColor: '#1976d2',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#1565c0',
+                  },
+                  '&:disabled': {
+                    backgroundColor: '#e0e0e0',
+                    color: '#9e9e9e',
+                  }
+                }}
+              >
+                <SendIcon />
+              </IconButton>
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontStyle: 'italic', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+              Use ↑/↓ arrows to navigate command history
+            </Typography>
+          </Paper>
+
+          {/* Quick Commands */}
+          <Paper sx={{ p: { xs: 1, sm: 2 }, flexShrink: 0 }}>
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: '#333', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Quick Commands
+            </Typography>
+            <Box sx={{ 
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)', lg: '1fr' },
+              gap: 0.5 
+            }}>
+              {[
+                { cmd: 'list', label: 'List Players', icon: '👥' },
+                { cmd: 'forge tps', label: 'Check TPS', icon: '🚀' },
+                { cmd: 'save-all', label: 'Save World', icon: '💾' },
+                { cmd: 'time set day', label: 'Set Day', icon: '☀️' },
+                { cmd: 'weather clear', label: 'Clear Weather', icon: '🌤️' }
+              ].map((quickCmd) => (
+                <Button
+                  key={quickCmd.cmd}
+                  variant="outlined"
                   size="small"
-                  placeholder="Enter command..."
-                  value={command}
-                  onChange={(e) => setCommand(e.target.value)}
-                  onKeyDown={handleKeyDown}
+                  fullWidth
                   disabled={loading || !serverStatus.isRunning}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      fontFamily: 'monospace',
-                    }
+                  onClick={() => setCommand(quickCmd.cmd)}
+                  sx={{ 
+                    justifyContent: 'flex-start', 
+                    textTransform: 'none',
+                    py: 0.5,
+                    fontWeight: 'medium',
+                    fontSize: { xs: '0.7rem', sm: '0.875rem' }
                   }}
-                />
-                <IconButton
-                  onClick={sendCommand}
-                  disabled={loading || !command.trim() || !serverStatus.isRunning}
-                  color="primary"
                 >
-                  <SendIcon />
-                </IconButton>
-              </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Use ↑/↓ arrows to navigate command history
-              </Typography>
-            </Paper>
+                  <span style={{ marginRight: 4, fontSize: { xs: '0.8rem', sm: '1rem' } }}>{quickCmd.icon}</span>
+                  {quickCmd.label}
+                </Button>
+              ))}
+            </Box>
+          </Paper>
 
-            {/* Quick Commands */}
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Quick Commands
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {[
-                  { cmd: 'list', label: 'List Players', icon: '👥' },
-                  { cmd: 'forge tps', label: 'Check TPS', icon: '🚀' },
-                  { cmd: 'save-all', label: 'Save World', icon: '💾' },
-                  { cmd: 'time set day', label: 'Set Day', icon: '☀️' },
-                  { cmd: 'weather clear', label: 'Clear Weather', icon: '🌤️' }
-                ].map((quickCmd) => (
+          {/* Command History */}
+          <Paper sx={{ p: { xs: 1, sm: 2 }, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold', color: '#333', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+              Command History
+            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 1, 
+              flex: 1,
+              overflow: 'auto',
+              maxHeight: { xs: 150, sm: 'none' },
+              '&::-webkit-scrollbar': {
+                width: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#c1c1c1',
+                borderRadius: '3px',
+                '&:hover': {
+                  background: '#a8a8a8',
+                },
+              },
+            }}>
+              {commandHistory.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2, fontStyle: 'italic' }}>
+                  No commands executed yet
+                </Typography>
+              ) : (
+                commandHistory.slice(0, 10).map((cmd, index) => (
                   <Button
-                    key={quickCmd.cmd}
-                    variant="outlined"
+                    key={index}
+                    variant="text"
                     size="small"
                     fullWidth
-                    disabled={loading || !serverStatus.isRunning}
-                    onClick={() => setCommand(quickCmd.cmd)}
-                    sx={{ justifyContent: 'flex-start', textTransform: 'none' }}
+                    onClick={() => setCommand(cmd)}
+                    sx={{ 
+                      justifyContent: 'flex-start', 
+                      textTransform: 'none',
+                      fontFamily: 'monospace',
+                      fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                      textAlign: 'left',
+                      py: 0.25,
+                      px: 0.5,
+                      '&:hover': {
+                        backgroundColor: '#f5f5f5',
+                      }
+                    }}
                   >
-                    <span style={{ marginRight: 8 }}>{quickCmd.icon}</span>
-                    {quickCmd.label}
+                    {cmd}
                   </Button>
-                ))}
-              </Box>
-            </Paper>
-
-            {/* Command History */}
-            <Paper sx={{ p: 2, flex: 1 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Command History
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 200, overflow: 'auto' }}>
-                {commandHistory.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                    No commands executed yet
-                  </Typography>
-                ) : (
-                  commandHistory.slice(0, 10).map((cmd, index) => (
-                    <Button
-                      key={index}
-                      variant="text"
-                      size="small"
-                      fullWidth
-                      onClick={() => setCommand(cmd)}
-                      sx={{ 
-                        justifyContent: 'flex-start', 
-                        textTransform: 'none',
-                        fontFamily: 'monospace',
-                        fontSize: '0.8rem',
-                        textAlign: 'left'
-                      }}
-                    >
-                      {cmd}
-                    </Button>
-                  ))
-                )}
-              </Box>
-            </Paper>
-          </Box>
-        </Grid>
-      </Grid>
+                ))
+              )}
+            </Box>
+          </Paper>
+        </Box>
+      </Box>
     </Box>
   );
 };
