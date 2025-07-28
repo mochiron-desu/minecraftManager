@@ -188,20 +188,34 @@ class ServerManager extends EventEmitter {
 
       if (graceful) {
         // Try graceful shutdown first via RCON
-        const { sendCommand } = require('./rconService');
+        const { connectRcon, sendCommand, disconnectRcon } = require('./rconService');
         try {
           this.emit('operationProgress', { 
             message: 'Attempting graceful shutdown via RCON...', 
             progress: 30 
           });
-          await sendCommand('stop');
+          
+          // Connect to RCON first
+          const rconOptions = {
+            host: process.env.RCON_HOST || 'localhost',
+            port: process.env.RCON_PORT || 25575,
+            password: process.env.RCON_PASSWORD || 'changeme',
+          };
+          
+          await connectRcon(rconOptions);
+          await sendCommand('stop', true); // Keep connection open
+          
           // Wait a bit for graceful shutdown
           this.emit('operationProgress', { 
             message: 'Waiting for graceful shutdown...', 
             progress: 60 
           });
           await new Promise(resolve => setTimeout(resolve, 10000)); // Increased wait time for Forge
+          
+          // Disconnect RCON
+          await disconnectRcon();
         } catch (error) {
+          console.log('RCON shutdown failed:', error.message);
           this.emit('operationProgress', { 
             message: 'RCON shutdown failed, using force stop...', 
             progress: 40 
@@ -210,29 +224,62 @@ class ServerManager extends EventEmitter {
       }
 
       // Force kill if still running
-      if (this.serverProcess && !this.serverProcess.killed) {
+      if (this.serverProcess && this.serverProcess.pid) {
         this.emit('operationProgress', { 
           message: 'Sending termination signal...', 
           progress: 70 
         });
+        
+        // Use SIGTERM for graceful termination
         this.serverProcess.kill('SIGTERM');
         
-        // Wait for graceful termination
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait for graceful termination with timeout
+        let terminated = false;
+        const waitForTermination = new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            resolve(false);
+          }, 5000);
+          
+          this.serverProcess.once('exit', (code, signal) => {
+            clearTimeout(timeout);
+            resolve(true);
+          });
+        });
+        
+        terminated = await waitForTermination;
         
         // Force kill if still running
-        if (this.serverProcess && !this.serverProcess.killed) {
+        if (!terminated && this.serverProcess && this.serverProcess.pid) {
           this.emit('operationProgress', { 
             message: 'Force killing server process...', 
             progress: 85 
           });
-          this.serverProcess.kill('SIGKILL');
+          
+          try {
+            this.serverProcess.kill('SIGKILL');
+            
+            // Wait a bit more for force kill
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (error) {
+            console.log('Force kill failed:', error.message);
+          }
         }
       }
+
+      // Update server state
+      this.isRunning = false;
+      this.serverProcess = null;
+      this.startTime = null;
 
       this.emit('operationProgress', { 
         message: 'Server shutdown completed', 
         progress: 100 
+      });
+
+      // Emit status change
+      this.emit('statusChanged', { 
+        status: 'stopped', 
+        message: 'Server stopped successfully' 
       });
 
       // Emit operation status end
